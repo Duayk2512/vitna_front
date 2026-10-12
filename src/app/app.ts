@@ -424,7 +424,17 @@ export class App implements OnInit, OnDestroy {
         { fields: e.errors || {}, status: r.status },
       );
     }
-    return r.status === 204 ? null : r.json();
+    if (r.status === 204) return null;
+    if (!r.headers.get('content-type')?.includes('application/json')) {
+      throw new Error(
+        'La API devolvió una página en lugar de datos. Revisa VITNA_BACKEND_URL y el proxy /api en Vercel; confirma que el backend Railway esté activo.',
+      );
+    }
+    try {
+      return await r.json();
+    } catch {
+      throw new Error('El servidor devolvió datos JSON incompletos o inválidos. Vuelve a intentarlo.');
+    }
   }
   readRoute() {
     const route = window.location.hash.replace(/^#\/?/, '');
