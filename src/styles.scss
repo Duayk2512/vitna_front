@@ -1,1 +1,25 @@
-html{scroll-behavior:smooth}body{margin:0;background:#fffdf7}*{box-sizing:border-box}button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #d4a94d;outline-offset:3px}
+@use 'app/app';
+@use 'app/cinematic';
+@use 'app/dashboard';
+@use 'app/responsive';
+@use 'app/users-page';
+@use 'app/operations';
+@use 'app/roles';
+@use 'app/professional';
+html {
+  scroll-behavior: smooth;
+}
+body {
+  margin: 0;
+  background: #fffdf7;
+}
+* {
+  box-sizing: border-box;
+}
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 3px solid #d4a94d;
+  outline-offset: 3px;
+}

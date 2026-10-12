@@ -24,6 +24,12 @@ interface Product {
   price?: number;
   published?: boolean;
   availableStock?: number;
+  unit?: string;
+  ingredients?: string;
+  allergens?: string;
+  storageInfo?: string;
+  netWeight?: string;
+  hasPhoto?: boolean;
 }
 @Component({
   selector: 'app-root',
@@ -37,16 +43,6 @@ interface Product {
     BarcodeComponent,
   ],
   templateUrl: './app.html',
-  styleUrls: [
-    './app.scss',
-    './cinematic.scss',
-    './dashboard.scss',
-    './responsive.scss',
-    './users-page.scss',
-    './operations.scss',
-    './roles.scss',
-    './professional.scss',
-  ],
 })
 export class App implements OnInit, OnDestroy {
   user = signal<any>(null);
@@ -137,6 +133,288 @@ export class App implements OnInit, OnDestroy {
   showPassword = false;
   productDialog = false;
   form: any = { role: 'CLIENTE', published: true, price: 0, warehouse: 'Productos terminados' };
+  loginMode: 'login' | 'forgot' | 'reset' = 'login';
+  resetToken = '';
+  recoveryPassword = '';
+  recoveryRepeat = '';
+  changeForm = { currentPassword: '', password: '', repeat: '' };
+  opsRows = signal<any[]>([]);
+  rawMaterials = signal<any[]>([]);
+  rawLots = signal<any[]>([]);
+  operationLots = signal<any[]>([]);
+  operationOrders = signal<any[]>([]);
+  mailConfig: any = {
+    enabled: false,
+    senderEmail: '',
+    senderName: 'VITNA',
+    frontendUrl: 'https://vitna-front.vercel.app',
+    apiKey: '',
+  };
+  mailMeta = signal<any>(null);
+  opsPage = 1;
+  opsSearch = '';
+  materialForm = { name: '', unit: 'kg' };
+  rawReceipt: any = {
+    materialId: '',
+    code: '',
+    quantity: 0,
+    expiry: '',
+    warehouse: 'Materias primas',
+  };
+  adjustmentForm: any = { lotId: '', kind: 'AJUSTE', delta: 0, reason: '' };
+  returnForm: any = {
+    orderId: '',
+    productId: '',
+    quantity: 0,
+    code: '',
+    warehouse: 'Devoluciones',
+    expiry: '',
+    reason: '',
+  };
+  recipeForm: any = { productId: '', outputQuantity: 1, items: [] };
+  recipeItem: any = { materialId: '', quantity: 0 };
+  paymentNotes: Record<number, string> = {};
+  photoMissing = new Set<number>();
+  photoFile: File | null = null;
+  extraMenu = [
+    { page: 'kardex', label: 'Kardex', roles: ['ADMIN', 'ALMACENERO'], icon: 'warehouse' },
+    {
+      page: 'ajustes',
+      label: 'Ajustes y mermas',
+      roles: ['ADMIN', 'ALMACENERO'],
+      icon: 'warehouse',
+    },
+    { page: 'devoluciones', label: 'Devoluciones', roles: ['ADMIN', 'ALMACENERO'], icon: 'orders' },
+    {
+      page: 'materias',
+      label: 'Materias primas',
+      roles: ['ADMIN', 'ALMACENERO', 'JEFE_PRODUCCION', 'CALIDAD'],
+      icon: 'warehouse',
+    },
+    {
+      page: 'recetas',
+      label: 'Recetas',
+      roles: ['ADMIN', 'JEFE_PRODUCCION', 'CALIDAD'],
+      icon: 'factory',
+    },
+    { page: 'auditoria', label: 'Auditoría', roles: ['ADMIN'], icon: 'shield' },
+    { page: 'configuracion', label: 'Correos · Brevo', roles: ['ADMIN'], icon: 'shield' },
+    {
+      page: 'perfil',
+      label: 'Seguridad de mi cuenta',
+      roles: ['ADMIN', 'CLIENTE', 'ALMACENERO', 'JEFE_PRODUCCION', 'TRABAJADOR', 'CALIDAD'],
+      icon: 'shield',
+    },
+  ];
+  visibleExtraMenu() {
+    return this.extraMenu.filter((item) => item.roles.includes(this.user()?.role));
+  }
+  operationalRows() {
+    const query = this.opsSearch.toLowerCase();
+    return this.opsRows().filter((row) => JSON.stringify(row).toLowerCase().includes(query));
+  }
+  operationPageRows() {
+    return this.operationalRows().slice((this.opsPage - 1) * 20, this.opsPage * 20);
+  }
+  operationPageCount() {
+    return Math.max(1, Math.ceil(this.operationalRows().length / 20));
+  }
+  async loadOperational(page: string) {
+    this.opsRows.set([]);
+    this.opsPage = 1;
+    this.opsSearch = '';
+    this.recordsLoading.set(true);
+    try {
+      if (page === 'configuracion') {
+        const config = await this.api('/admin/mail');
+        this.mailMeta.set(config);
+        this.mailConfig = {
+          enabled: config.enabled,
+          senderEmail: config.sender_email || '',
+          senderName: config.sender_name || 'VITNA',
+          frontendUrl: config.frontend_url || '',
+          apiKey: '',
+        };
+      }
+      if (page === 'auditoria') this.opsRows.set(await this.api('/admin/audit'));
+      if (page === 'kardex') this.opsRows.set(await this.api('/inventory/movements'));
+      if (page === 'ajustes') {
+        const [rows, lots] = await Promise.all([
+          this.api('/inventory/adjustments'),
+          this.api('/lots'),
+        ]);
+        this.opsRows.set(rows);
+        this.operationLots.set(lots);
+      }
+      if (page === 'devoluciones')
+        this.operationOrders.set(
+          (await this.api('/orders')).filter((row: any) => row.status === 'ENTREGADO'),
+        );
+      if (['materias', 'recetas'].includes(page)) {
+        const [materials, lots] = await Promise.all([
+          this.api('/materials'),
+          this.api('/materials/lots'),
+        ]);
+        this.rawMaterials.set(materials);
+        this.rawLots.set(lots);
+        if (page === 'recetas') this.opsRows.set(await this.api('/materials/recipes'));
+      }
+    } catch (error: any) {
+      this.recordsError.set(error.message);
+    } finally {
+      this.recordsLoading.set(false);
+    }
+  }
+  async operationalPost(path: string, data: any) {
+    await this.action(async () => {
+      const result = await this.api(path, data, 'POST');
+      await this.loadOperational(this.page());
+      this.message.set(result.message || 'Operación registrada.');
+    });
+  }
+  async saveMail() {
+    await this.action(async () => {
+      const result = await this.api('/admin/mail', this.mailConfig, 'PUT');
+      this.mailConfig.apiKey = '';
+      await this.loadOperational('configuracion');
+      this.message.set(result.message);
+    });
+  }
+  async testMail() {
+    await this.action(async () => {
+      const result = await this.api('/admin/mail/test', {}, 'POST');
+      await this.loadOperational('configuracion');
+      this.message.set(result.message);
+    });
+  }
+  addIngredient() {
+    if (!this.recipeItem.materialId || this.recipeItem.quantity <= 0) return;
+    const id = Number(this.recipeItem.materialId);
+    if (this.recipeForm.items.some((item: any) => item.materialId === id)) {
+      this.message.set('La materia prima ya está en la receta.');
+      return;
+    }
+    this.recipeForm.items.push({ materialId: id, quantity: Number(this.recipeItem.quantity) });
+    this.recipeItem = { materialId: '', quantity: 0 };
+  }
+  ingredientName(id: number) {
+    return this.rawMaterials().find((row) => row.id === id)?.name || 'Materia prima';
+  }
+  returnProducts() {
+    return (
+      this.operationOrders().find((row) => row.id === Number(this.returnForm.orderId))?.items || []
+    );
+  }
+  async recovery() {
+    await this.action(async () => {
+      if (this.loginMode === 'forgot') {
+        const result = await this.api('/public/password/forgot', { email: this.email }, 'POST');
+        this.message.set(result.message);
+      } else {
+        if (this.recoveryPassword !== this.recoveryRepeat)
+          throw new Error('Las contraseñas no coinciden.');
+        const result = await this.api(
+          '/public/password/reset',
+          { token: this.resetToken, password: this.recoveryPassword },
+          'POST',
+        );
+        this.recoveryPassword = '';
+        this.recoveryRepeat = '';
+        this.resetToken = '';
+        this.loginMode = 'login';
+        this.clearLocalSession('login');
+        await this.navigate('login');
+        this.message.set(result.message);
+      }
+    });
+  }
+  async changePassword() {
+    await this.action(async () => {
+      if (this.changeForm.password !== this.changeForm.repeat)
+        throw new Error('Las contraseñas no coinciden.');
+      const result = await this.api(
+        '/account/password',
+        { currentPassword: this.changeForm.currentPassword, password: this.changeForm.password },
+        'POST',
+      );
+      this.changeForm = { currentPassword: '', password: '', repeat: '' };
+      this.clearLocalSession('login');
+      this.loginMode = 'login';
+      this.message.set(result.message);
+    });
+  }
+  async upload(path: string, file: File) {
+    const csrf = await this.api('/csrf');
+    const body = new FormData();
+    body.append('file', file);
+    const response = await fetch('/api' + path, {
+      method: 'POST',
+      body,
+      headers: { [csrf.headerName]: csrf.token },
+      signal: AbortSignal.timeout(20000),
+    });
+    const result = await response
+      .json()
+      .catch(() => ({ message: 'El archivo no pudo adjuntarse. Revisa formato y tamaño.' }));
+    if (!response.ok) throw new Error(result.message || 'No se pudo adjuntar.');
+    return result;
+  }
+  selectedFile(event: Event) {
+    return (event.target as HTMLInputElement).files?.[0] || null;
+  }
+  async proofFile(order: any, event: Event) {
+    const file = this.selectedFile(event);
+    if (!file) return;
+    await this.action(async () => {
+      const result = await this.upload('/orders/' + order.id + '/proofs', file);
+      await this.navigate('pedidos');
+      this.message.set(result.message);
+    });
+  }
+  async openProof(orderId: number, fileId: number) {
+    await this.action(async () => {
+      const response = await fetch('/api/orders/' + orderId + '/proofs/' + fileId, {
+        signal: AbortSignal.timeout(20000),
+      });
+      if (!response.ok) throw new Error('No tienes acceso al comprobante o ya no existe.');
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download =
+        'comprobante-' +
+        fileId +
+        (blob.type === 'application/pdf'
+          ? '.pdf'
+          : blob.type === 'image/png'
+            ? '.png'
+            : blob.type === 'image/webp'
+              ? '.webp'
+              : '.jpg');
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 30000);
+    });
+  }
+  async compressedPhoto(file: File) {
+    if (file.size > 8 * 1024 * 1024) throw new Error('La foto original supera 8 MB.');
+    const bitmap = await createImageBitmap(file);
+    try {
+      const canvas = document.createElement('canvas');
+      const scale = Math.min(1, 1600 / Math.max(bitmap.width, bitmap.height));
+      canvas.width = Math.round(bitmap.width * scale);
+      canvas.height = Math.round(bitmap.height * scale);
+      const context = canvas.getContext('2d');
+      if (!context) throw new Error('No se pudo procesar la foto.');
+      context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      const blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob(resolve, 'image/jpeg', 0.85),
+      );
+      if (!blob) throw new Error('No se pudo procesar la foto.');
+      return new File([blob], 'foto-producto.jpg', { type: 'image/jpeg' });
+    } finally {
+      bitmap.close();
+    }
+  }
   @HostListener('window:scroll') onScroll() {
     const y = window.scrollY;
     this.scrolled = y > 25;
@@ -351,6 +629,14 @@ export class App implements OnInit, OnDestroy {
           inventario: 'Inventario y lotes',
           produccion: this.can('TRABAJADOR') ? 'Mis tareas de producción' : 'Producción',
           calidad: 'Control de calidad',
+          perfil: 'Seguridad de mi cuenta',
+          configuracion: 'Correos transaccionales · Brevo',
+          auditoria: 'Auditoría de operaciones',
+          kardex: 'Kardex de productos',
+          ajustes: 'Ajustes, mermas y vencimientos',
+          devoluciones: 'Recepción de devoluciones',
+          materias: 'Materias primas',
+          recetas: 'Recetas de producción',
         } as Record<string, string>
       )[this.page()] || 'Tu espacio'
     );
@@ -376,7 +662,9 @@ export class App implements OnInit, OnDestroy {
         this.message.set(e.message);
       }
       const target = ['inicio', 'login'].includes(requested)
-        ? 'panel'
+        ? this.loginMode === 'reset'
+          ? 'login'
+          : 'panel'
         : this.pageAllowed(requested)
           ? requested
           : 'panel';
@@ -433,11 +721,18 @@ export class App implements OnInit, OnDestroy {
     try {
       return await r.json();
     } catch {
-      throw new Error('El servidor devolvió datos JSON incompletos o inválidos. Vuelve a intentarlo.');
+      throw new Error(
+        'El servidor devolvió datos JSON incompletos o inválidos. Vuelve a intentarlo.',
+      );
     }
   }
   readRoute() {
     const route = window.location.hash.replace(/^#\/?/, '');
+    if (route.startsWith('restablecer/')) {
+      this.resetToken = route.slice('restablecer/'.length);
+      this.loginMode = 'reset';
+      return 'login';
+    }
     return [
       'inicio',
       'catalogo',
@@ -450,6 +745,14 @@ export class App implements OnInit, OnDestroy {
       'inventario',
       'produccion',
       'calidad',
+      'perfil',
+      'configuracion',
+      'auditoria',
+      'kardex',
+      'ajustes',
+      'devoluciones',
+      'materias',
+      'recetas',
     ].includes(route)
       ? route
       : 'inicio';
@@ -599,6 +902,10 @@ export class App implements OnInit, OnDestroy {
     if (p === 'produccion' && this.can('JEFE_PRODUCCION')) await this.loadWorkers();
     if (p === 'inventario' && this.can('ADMIN', 'ALMACENERO')) await this.loadReceipts();
     if (token !== this.navigationId) return;
+    if (this.extraMenu.some((item) => item.page === p)) {
+      if (p !== 'perfil') await this.loadOperational(p);
+      return;
+    }
     const endpoints: Record<string, string> = {
       usuarios: '/users',
       pedidos: '/orders',
@@ -692,6 +999,7 @@ export class App implements OnInit, OnDestroy {
     );
   }
   openProduct() {
+    this.photoFile = null;
     this.form = {
       sku: '',
       barcode: '',
@@ -701,6 +1009,11 @@ export class App implements OnInit, OnDestroy {
       description: '',
       price: 0,
       published: true,
+      unit: 'unidad',
+      ingredients: '',
+      allergens: '',
+      storageInfo: '',
+      netWeight: '',
     };
     this.productDialog = true;
     setTimeout(() => document.querySelector<HTMLInputElement>('.product-modal input')?.focus(), 0);
@@ -731,7 +1044,25 @@ export class App implements OnInit, OnDestroy {
   async saveCatalogProduct() {
     const editing = !!this.form.id;
     await this.action(async () => {
-      await this.api('/products', { ...this.form }, 'POST');
+      const saved = await this.api('/products', { ...this.form }, 'POST');
+      this.form.id = saved.id;
+      await this.api(
+        '/products/' + saved.id + '/details',
+        {
+          unit: this.form.unit || 'unidad',
+          ingredients: this.form.ingredients || '',
+          allergens: this.form.allergens || '',
+          storageInfo: this.form.storageInfo || '',
+          netWeight: this.form.netWeight || '',
+        },
+        'PUT',
+      );
+      if (this.photoFile) {
+        const photo = await this.compressedPhoto(this.photoFile);
+        await this.upload('/products/' + saved.id + '/photo', photo);
+        this.photoMissing.delete(saved.id);
+        this.photoFile = null;
+      }
       await this.loadProducts();
       this.productDialog = false;
       this.message.set(
@@ -758,15 +1089,23 @@ export class App implements OnInit, OnDestroy {
     );
   }
   add(p: Product) {
-    if (!this.can('CLIENTE') || this.cartQuantity(p.id) + 1 > Math.floor(p.availableStock || 0)) {
+    if (!this.can('CLIENTE') || !this.canAddProduct(p)) {
       this.message.set('No hay más unidades disponibles de este producto.');
       return;
     }
     this.cart.update((items) => {
+      const increment = Math.min(
+        1,
+        Math.round(((p.availableStock || 0) - this.cartQuantity(p.id)) * 100) / 100,
+      );
       const exists = items.find((i) => i.product.id === p.id);
       return exists
-        ? items.map((i) => (i.product.id === p.id ? { ...i, quantity: i.quantity + 1 } : i))
-        : [...items, { product: p, quantity: 1 }];
+        ? items.map((i) =>
+            i.product.id === p.id
+              ? { ...i, quantity: Math.round((i.quantity + increment) * 100) / 100 }
+              : i,
+          )
+        : [...items, { product: p, quantity: increment }];
     });
     this.message.set('Producto agregado al pedido.');
   }
@@ -774,7 +1113,35 @@ export class App implements OnInit, OnDestroy {
     this.cart.update((items) => items.filter((i) => i.product.id !== id));
   }
   total() {
-    return this.cart().reduce((s, i) => s + (i.product.price || 0) * i.quantity, 0);
+    return this.cart().reduce(
+      (s, i) => s + Math.round(((i.product.price || 0) * i.quantity + Number.EPSILON) * 100) / 100,
+      0,
+    );
+  }
+  quantityStep(product: Product) {
+    return ['kg', 'g', 'l', 'litro', 'litros'].includes(
+      (product.unit || 'unidad').trim().toLowerCase(),
+    )
+      ? 0.01
+      : 1;
+  }
+  canAddProduct(product: Product) {
+    return (
+      this.cartQuantity(product.id) + this.quantityStep(product) <=
+      (product.availableStock || 0) + 0.000001
+    );
+  }
+  setQuantity(id: number, quantity: number) {
+    const product = this.products().find((row) => row.id === id);
+    if (!product) return;
+    let value = Math.max(
+      this.quantityStep(product),
+      Math.min(Number(quantity) || this.quantityStep(product), product.availableStock || 0),
+    );
+    value = this.quantityStep(product) === 1 ? Math.floor(value) : Math.round(value * 100) / 100;
+    this.cart.update((rows) =>
+      rows.map((row) => (row.product.id === id ? { ...row, quantity: value } : row)),
+    );
   }
   async checkout() {
     if (!this.cart().length || !this.address.trim() || !this.cartAvailable()) {
@@ -843,6 +1210,7 @@ export class App implements OnInit, OnDestroy {
     });
   }
   edit(p: Product) {
+    this.photoFile = null;
     this.form = { ...p };
     this.productDialog = true;
   }
@@ -1061,6 +1429,7 @@ export class App implements OnInit, OnDestroy {
           DESPACHADO: 'Despachado',
           ENTREGADO: 'Entregado',
           CANCELADO: 'Cancelado',
+          RESERVA_VENCIDA: 'Reserva vencida',
           CUARENTENA: 'En cuarentena',
           APROBADO: 'Aprobado',
           RECHAZADO: 'Rechazado',
@@ -1078,22 +1447,7 @@ export class App implements OnInit, OnDestroy {
     return !!r.expiry && r.expiry < this.today;
   }
   changeQuantity(id: number, delta: number) {
-    this.cart.update((items) =>
-      items.map((i) =>
-        i.product.id === id
-          ? {
-              ...i,
-              quantity: Math.max(
-                1,
-                Math.min(
-                  Math.floor(this.products().find((p) => p.id === id)?.availableStock || 0),
-                  i.quantity + delta,
-                ),
-              ),
-            }
-          : i,
-      ),
-    );
+    this.setQuantity(id, this.cartQuantity(id) + delta);
   }
   selectScannedProduct() {
     const code = this.receivingCode.trim();
@@ -1130,6 +1484,14 @@ export class App implements OnInit, OnDestroy {
       inventario: ['ADMIN', 'ALMACENERO', 'JEFE_PRODUCCION', 'CALIDAD'],
       produccion: ['ADMIN', 'JEFE_PRODUCCION', 'TRABAJADOR', 'CALIDAD'],
       calidad: ['CALIDAD'],
+      perfil: this.roles,
+      configuracion: ['ADMIN'],
+      auditoria: ['ADMIN'],
+      kardex: ['ADMIN', 'ALMACENERO'],
+      ajustes: ['ADMIN', 'ALMACENERO'],
+      devoluciones: ['ADMIN', 'ALMACENERO'],
+      materias: ['ADMIN', 'ALMACENERO', 'JEFE_PRODUCCION', 'CALIDAD'],
+      recetas: ['ADMIN', 'JEFE_PRODUCCION', 'CALIDAD'],
     };
     return ['inicio', 'catalogo', 'login'].includes(p) || !!access[p]?.includes(this.user()?.role);
   }
@@ -1406,7 +1768,11 @@ export class App implements OnInit, OnDestroy {
 
   async orderStatus(id: number, status: string) {
     await this.action(async () => {
-      await this.api('/orders/' + id + '/status', { status }, 'POST');
+      await this.api(
+        '/orders/' + id + '/status',
+        { status, paymentNote: this.paymentNotes[id] || '' },
+        'POST',
+      );
       await this.navigate('pedidos');
     });
   }

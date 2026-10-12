@@ -285,31 +285,70 @@
         @for (p of visibleProducts(); track p.id) {
           <article class="product premium-product">
             <div class="product-art" [class.cocoa]="p.category === 'Chocolates'">
-              <span class="category-tag">{{ p.category }}</span>
-              <div class="mini-pack">
-                <img src="vitna-logo.png" alt="VITNA" width="100" height="50" /><strong>{{
-                  p.category
-                }}</strong
-                ><small>{{ p.presentation }}</small>
-              </div>
-              <span class="art-caption">Presentación ilustrativa</span>
+              @if (p.hasPhoto && !photoMissing.has(p.id)) {
+                <img
+                  class="real-product-photo"
+                  [src]="'/api/public/products/' + p.id + '/photo'"
+                  [alt]="p.name"
+                  loading="lazy"
+                  decoding="async"
+                  width="600"
+                  height="450"
+                  (error)="photoMissing.add(p.id)"
+                />
+              } @else {
+                <span class="category-tag">{{ p.category }}</span>
+                <div class="mini-pack">
+                  <img src="vitna-logo.png" alt="VITNA" width="100" height="50" /><strong>{{
+                    p.category
+                  }}</strong
+                  ><small>{{ p.presentation }}</small>
+                </div>
+                <span class="art-caption">Presentación ilustrativa</span>
+              }
             </div>
             <div class="product-body">
               <small>{{ p.presentation }}</small>
               <h3>{{ p.name }}</h3>
               <p>{{ p.description }}</p>
+              @if (p.ingredients || p.allergens || p.storageInfo || p.netWeight) {
+                <details class="product-details">
+                  <summary>Ficha del producto</summary>
+                  <dl>
+                    @if (p.netWeight) {
+                      <dt>Peso neto</dt>
+                      <dd>{{ p.netWeight }}</dd>
+                    }
+                    @if (p.unit) {
+                      <dt>Unidad de venta</dt>
+                      <dd>{{ p.unit }}</dd>
+                    }
+                    @if (p.ingredients) {
+                      <dt>Ingredientes</dt>
+                      <dd>{{ p.ingredients }}</dd>
+                    }
+                    @if (p.allergens) {
+                      <dt>Alérgenos</dt>
+                      <dd>{{ p.allergens }}</dd>
+                    }
+                    @if (p.storageInfo) {
+                      <dt>Conservación</dt>
+                      <dd>{{ p.storageInfo }}</dd>
+                    }
+                  </dl>
+                </details>
+              }
               @if (can('CLIENTE')) {
                 <strong class="product-price">{{ p.price | currency: 'PEN' : 'S/ ' }}</strong
-                ><span class="stock-label" [class.out-of-stock]="(p.availableStock || 0) < 1">{{
-                  (p.availableStock || 0) < 1
-                    ? 'Sin stock disponible'
-                    : p.availableStock + ' unidades disponibles'
-                }}</span
-                ><button
-                  class="primary"
-                  [disabled]="busy() || cartQuantity(p.id) + 1 > (p.availableStock || 0)"
-                  (click)="add(p)"
-                >
+                ><span
+                  class="stock-label"
+                  [class.out-of-stock]="(p.availableStock || 0) < quantityStep(p)"
+                  >{{
+                    (p.availableStock || 0) < quantityStep(p)
+                      ? 'Sin stock disponible'
+                      : p.availableStock + ' ' + (p.unit || 'unidad') + ' disponibles'
+                  }}</span
+                ><button class="primary" [disabled]="busy() || !canAddProduct(p)" (click)="add(p)">
                   ＋ Agregar al pedido
                 </button>
               } @else {
@@ -346,15 +385,23 @@
               <div class="quantity-controls">
                 <button
                   aria-label="Reducir cantidad"
-                  (click)="changeQuantity(i.product.id, -1)"
-                  [disabled]="i.quantity === 1"
+                  (click)="changeQuantity(i.product.id, -quantityStep(i.product))"
+                  [disabled]="i.quantity <= quantityStep(i.product)"
                 >
                   −</button
-                ><span>{{ i.quantity }} {{ i.quantity === 1 ? 'unidad' : 'unidades' }}</span
+                ><input
+                  type="number"
+                  [attr.aria-label]="'Cantidad de ' + i.product.name"
+                  [ngModel]="i.quantity"
+                  (ngModelChange)="setQuantity(i.product.id, $event)"
+                  [min]="quantityStep(i.product)"
+                  [step]="quantityStep(i.product)"
+                  [max]="productStock(i.product.id)"
+                /><span>{{ i.product.unit || 'unidad' }}</span
                 ><button
                   aria-label="Aumentar cantidad"
-                  [disabled]="cartQuantity(i.product.id) + 1 > (productStock(i.product.id) || 0)"
-                  (click)="changeQuantity(i.product.id, 1)"
+                  [disabled]="!canAddProduct(i.product)"
+                  (click)="changeQuantity(i.product.id, quantityStep(i.product))"
                 >
                   ＋
                 </button>
@@ -412,54 +459,127 @@
     <section class="auth-form-section">
       <div class="auth-form-inner">
         <span class="auth-icon"><app-icon name="shield" /></span>
-        <h1>Qué bueno verte<br />de nuevo.</h1>
-        <p>Ingresa tus datos para acceder a tu cuenta.</p>
-        <form #loginForm="ngForm" (ngSubmit)="login()">
-          @if (loginError()) {
-            <div class="inline-error" role="alert">
-              <app-icon name="shield" />{{ loginError() }}
-            </div>
-          }
-          <label for="login-email">Correo electrónico</label
-          ><input
-            id="login-email"
-            type="email"
-            name="email"
-            [(ngModel)]="email"
-            (ngModelChange)="loginError.set('')"
-            autocomplete="username"
-            placeholder="tu.correo@ejemplo.com"
-            required
-            email
-          /><label for="login-password">Contraseña</label>
-          <div class="password-field">
-            <input
-              id="login-password"
-              [type]="showPassword ? 'text' : 'password'"
-              name="password"
-              [(ngModel)]="password"
+        @if (loginMode === 'login') {
+          <h1>Qué bueno verte<br />de nuevo.</h1>
+          <p>Ingresa tus datos para acceder a tu cuenta.</p>
+        } @else {
+          <h1>{{ loginMode === 'forgot' ? 'Recupera tu acceso.' : 'Renueva tu contraseña.' }}</h1>
+          <p>
+            {{
+              loginMode === 'forgot'
+                ? 'Te enviaremos un enlace privado a tu correo.'
+                : 'Elige una contraseña nueva para proteger tu cuenta.'
+            }}
+          </p>
+        }
+        @if (loginMode === 'login') {
+          <form #loginForm="ngForm" (ngSubmit)="login()">
+            @if (loginError()) {
+              <div class="inline-error" role="alert">
+                <app-icon name="shield" />{{ loginError() }}
+              </div>
+            }
+            <label for="login-email">Correo electrónico</label
+            ><input
+              id="login-email"
+              type="email"
+              name="email"
+              [(ngModel)]="email"
               (ngModelChange)="loginError.set('')"
-              autocomplete="current-password"
-              placeholder="Ingresa tu contraseña"
+              autocomplete="username"
+              placeholder="tu.correo@ejemplo.com"
               required
-            /><button
-              type="button"
-              (click)="showPassword = !showPassword"
-              [attr.aria-label]="showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
-            >
-              {{ showPassword ? 'Ocultar' : 'Mostrar' }}
+              email
+            /><label for="login-password">Contraseña</label>
+            <div class="password-field">
+              <input
+                id="login-password"
+                [type]="showPassword ? 'text' : 'password'"
+                name="password"
+                [(ngModel)]="password"
+                (ngModelChange)="loginError.set('')"
+                autocomplete="current-password"
+                placeholder="Ingresa tu contraseña"
+                required
+              /><button
+                type="button"
+                (click)="showPassword = !showPassword"
+                [attr.aria-label]="showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+              >
+                {{ showPassword ? 'Ocultar' : 'Mostrar' }}
+              </button>
+            </div>
+            <button class="primary auth-submit" [disabled]="busy() || loginForm.invalid">
+              {{ busy() ? 'Ingresando…' : 'Ingresar a mi cuenta' }} <span>→</span>
             </button>
+          </form>
+          <div class="account-request">
+            <strong>¿Todavía no tienes una cuenta?</strong>
+            <p>El administrador creará tu acceso después de atender tu solicitud por WhatsApp.</p>
+            <button (click)="navigate('catalogo')">Explorar productos y solicitar acceso ↗</button>
           </div>
-          <button class="primary auth-submit" [disabled]="busy() || loginForm.invalid">
-            {{ busy() ? 'Ingresando…' : 'Ingresar a mi cuenta' }} <span>→</span>
+          <small class="auth-security">Acceso exclusivo para cuentas autorizadas.</small>
+          <button class="forgot-access" (click)="loginMode = 'forgot'; loginError.set('')">
+            Olvidé mi contraseña
           </button>
-        </form>
-        <div class="account-request">
-          <strong>¿Todavía no tienes una cuenta?</strong>
-          <p>El administrador creará tu acceso después de atender tu solicitud por WhatsApp.</p>
-          <button (click)="navigate('catalogo')">Explorar productos y solicitar acceso ↗</button>
-        </div>
-        <small class="auth-security">Acceso exclusivo para cuentas autorizadas.</small>
+        } @else {
+          <form #recoveryForm="ngForm" (ngSubmit)="recovery()">
+            <h2>
+              {{ loginMode === 'forgot' ? 'Recuperar mi acceso' : 'Crear una contraseña nueva' }}
+            </h2>
+            @if (loginMode === 'forgot') {
+              <p>
+                Recibirás un enlace de un solo uso, válido por 20 minutos, si tu cuenta está activa.
+              </p>
+              <label
+                >Correo de tu cuenta<input
+                  type="email"
+                  name="recoveryEmail"
+                  [(ngModel)]="email"
+                  autocomplete="email"
+                  required
+                  maxlength="254"
+              /></label>
+            } @else {
+              <label
+                >Nueva contraseña<input
+                  type="password"
+                  name="recoveryPassword"
+                  [(ngModel)]="recoveryPassword"
+                  autocomplete="new-password"
+                  minlength="10"
+                  maxlength="72"
+                  required
+              /></label>
+              <label
+                >Repetir contraseña<input
+                  type="password"
+                  name="recoveryRepeat"
+                  [(ngModel)]="recoveryRepeat"
+                  autocomplete="new-password"
+                  minlength="10"
+                  maxlength="72"
+                  required
+              /></label>
+              <small>Usa al menos 10 caracteres. El cambio cerrará las sesiones anteriores.</small>
+            }
+            <button class="primary" [disabled]="busy() || recoveryForm.invalid">
+              {{ loginMode === 'forgot' ? 'Enviar enlace' : 'Guardar contraseña' }}
+            </button>
+            <button
+              type="button"
+              (click)="
+                loginMode = 'login';
+                resetToken = '';
+                recoveryPassword = '';
+                recoveryRepeat = '';
+                navigate('login')
+              "
+            >
+              Volver al inicio de sesión
+            </button>
+          </form>
+        }
       </div>
     </section>
   </main>
@@ -484,6 +604,44 @@
       <form #productForm="ngForm" (ngSubmit)="saveCatalogProduct()">
         <ng-container [ngTemplateOutlet]="formErrorsTemplate" />
         <div class="form-columns">
+          <label
+            >Unidad de venta<input
+              name="unit"
+              [(ngModel)]="form.unit"
+              maxlength="30"
+              placeholder="unidad, kg, caja…"
+              required
+          /></label>
+          <label
+            >Peso neto<input
+              name="netWeight"
+              [(ngModel)]="form.netWeight"
+              maxlength="100"
+              placeholder="Ej. 250 g"
+          /></label>
+          <label class="full-form-field"
+            >Ingredientes<textarea
+              name="ingredients"
+              [(ngModel)]="form.ingredients"
+              maxlength="2000"
+            ></textarea>
+          </label>
+          <label
+            >Alérgenos<input name="allergens" [(ngModel)]="form.allergens" maxlength="1000"
+          /></label>
+          <label
+            >Conservación<input name="storageInfo" [(ngModel)]="form.storageInfo" maxlength="1000"
+          /></label>
+          <label class="full-form-field"
+            >Foto real del producto<input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              (change)="photoFile = selectedFile($event)"
+            /><small
+              >Se optimiza antes de guardar. JPG, PNG o WebP; original de hasta 8 MB. Elegir una
+              nueva foto reemplaza la anterior.</small
+            ></label
+          >
           <label
             >Código SKU<input
               name="sku"
@@ -692,6 +850,16 @@
             <app-icon name="shield" /><span>Control de calidad</span>
           </button>
         }
+        @for (item of visibleExtraMenu(); track item.page) {
+          <button
+            [class.selected]="page() === item.page"
+            [attr.aria-current]="page() === item.page ? 'page' : null"
+            [title]="item.label"
+            (click)="navigate(item.page)"
+          >
+            <app-icon [name]="item.icon" /><span>{{ item.label }}</span>
+          </button>
+        }
       </nav>
       <div class="sidebar-bottom">
         <button
@@ -778,6 +946,597 @@
           <ng-container [ngTemplateOutlet]="catalogTemplate" />
         </section>
       }
+      @if (page() === 'perfil') {
+        <section class="card business-card">
+          <h2>Cambiar mi contraseña</h2>
+          <p>El cambio cierra las sesiones anteriores. Tu correo y rol se conservan.</p>
+          <form #passwordForm="ngForm" (ngSubmit)="changePassword()" class="business-form">
+            <label
+              >Contraseña actual<input
+                type="password"
+                name="currentPassword"
+                [(ngModel)]="changeForm.currentPassword"
+                autocomplete="current-password"
+                required
+            /></label>
+            <label
+              >Nueva contraseña<input
+                type="password"
+                name="nextPassword"
+                [(ngModel)]="changeForm.password"
+                autocomplete="new-password"
+                minlength="10"
+                maxlength="72"
+                required
+            /></label>
+            <label
+              >Repetir nueva contraseña<input
+                type="password"
+                name="repeatPassword"
+                [(ngModel)]="changeForm.repeat"
+                autocomplete="new-password"
+                minlength="10"
+                maxlength="72"
+                required
+            /></label>
+            <button class="primary" [disabled]="busy() || passwordForm.invalid">
+              Actualizar mi contraseña
+            </button>
+          </form>
+        </section>
+      }
+      @if (
+        [
+          'configuracion',
+          'auditoria',
+          'kardex',
+          'ajustes',
+          'devoluciones',
+          'materias',
+          'recetas',
+        ].includes(page())
+      ) {
+        @if (recordsLoading()) {
+          <div class="operations-empty" role="status">Cargando información…</div>
+        }
+        @if (recordsError()) {
+          <div class="inline-error" role="alert">
+            {{ recordsError() }}<button (click)="loadOperational(page())">Reintentar</button>
+          </div>
+        }
+      }
+      @if (page() === 'configuracion' && mailMeta()) {
+        <section class="card business-card">
+          <h2>Brevo · correo transaccional</h2>
+          <p>
+            Configura un remitente verificado en Brevo. La API key se guarda cifrada y nunca se
+            vuelve a mostrar.
+          </p>
+          @if (!mailMeta().encryptionReady) {
+            <div class="inline-error">
+              Falta la clave de cifrado del servidor. Configura VITNA_SETTINGS_KEY en Railway antes
+              de guardar una API key. Consulta la guía de despliegue.
+            </div>
+          }
+          <form #mailForm="ngForm" (ngSubmit)="saveMail()" class="business-form">
+            <label
+              >Correo remitente<input
+                type="email"
+                name="senderEmail"
+                [(ngModel)]="mailConfig.senderEmail"
+                required
+                maxlength="254"
+            /></label>
+            <label
+              >Nombre remitente<input
+                name="senderName"
+                [(ngModel)]="mailConfig.senderName"
+                required
+                maxlength="150"
+            /></label>
+            <label
+              >Origen público del frontend<input
+                type="url"
+                name="frontendUrl"
+                [(ngModel)]="mailConfig.frontendUrl"
+                required
+                placeholder="https://…"
+            /></label>
+            <label
+              >API key de Brevo<input
+                type="password"
+                name="apiKey"
+                [(ngModel)]="mailConfig.apiKey"
+                autocomplete="off"
+                maxlength="500"
+                [placeholder]="
+                  mailMeta().keyConfigured
+                    ? 'Configurada; dejar vacío para conservar'
+                    : 'Ingresar API key'
+                "
+            /></label>
+            <label class="check"
+              ><input type="checkbox" name="mailEnabled" [(ngModel)]="mailConfig.enabled" />
+              Habilitar correos transaccionales</label
+            >
+            <button class="primary" [disabled]="busy() || mailForm.invalid">
+              Guardar configuración
+            </button>
+            <button type="button" [disabled]="busy() || !mailMeta().enabled" (click)="testMail()">
+              Enviar prueba a mi cuenta
+            </button>
+          </form>
+        </section>
+        <section class="card business-card">
+          <h2>Últimos envíos</h2>
+          <p>
+            La confirmación del proveedor indica aceptación del envío; revisa también la bandeja de
+            correo.
+          </p>
+          @for (row of mailMeta().recent; track row.id) {
+            <div class="business-row">
+              <strong>{{ row.subject }}</strong
+              ><span>{{ row.status }}</span
+              ><small>{{ row.created_at | date: 'dd/MM/yyyy HH:mm' }}</small>
+            </div>
+          } @empty {
+            <p>No hay envíos registrados.</p>
+          }
+          <button (click)="loadOperational('configuracion')">Actualizar estados</button>
+        </section>
+      }
+      @if (page() === 'ajustes') {
+        <section class="card business-card">
+          <h2>Solicitar ajuste de inventario</h2>
+          <p>
+            Las solicitudes no cambian stock hasta que el administrador las aprueba. No se puede
+            descontar stock reservado.
+          </p>
+          <form
+            #adjustment="ngForm"
+            class="business-form"
+            (ngSubmit)="operationalPost('/inventory/adjustments', adjustmentForm)"
+          >
+            <label
+              >Lote<select name="lotId" [(ngModel)]="adjustmentForm.lotId" required>
+                <option value="">Seleccionar</option>
+                @for (lot of operationLots(); track lot.id) {
+                  <option [value]="lot.id">
+                    {{ lot.product.name }} · {{ lot.code }} · stock {{ lot.quantity }}
+                  </option>
+                }
+              </select></label
+            >
+            <label
+              >Motivo<select name="kind" [(ngModel)]="adjustmentForm.kind">
+                <option>AJUSTE</option>
+                <option>MERMA</option>
+                <option>VENCIMIENTO</option>
+              </select></label
+            >
+            <label
+              >Cantidad a sumar o descontar<input
+                type="number"
+                name="delta"
+                [(ngModel)]="adjustmentForm.delta"
+                step="0.01"
+                required
+              /><small
+                >Negativo para descontar. Mermas y vencimientos siempre descuentan.</small
+              ></label
+            >
+            <label
+              >Justificación<textarea
+                name="reason"
+                [(ngModel)]="adjustmentForm.reason"
+                required
+                maxlength="1000"
+              ></textarea>
+            </label>
+            <button
+              class="primary"
+              [disabled]="busy() || adjustment.invalid || !adjustmentForm.delta"
+            >
+              Enviar para aprobación
+            </button>
+          </form>
+        </section>
+      }
+      @if (page() === 'devoluciones') {
+        <section class="card business-card">
+          <h2>Recibir una devolución</h2>
+          <p>
+            Solo para pedidos entregados, sin superar las cantidades originales. La mercancía vuelve
+            en cuarentena y calidad decide su liberación. Los reembolsos se gestionan por separado.
+          </p>
+          <form
+            #returnReceipt="ngForm"
+            class="business-form"
+            (ngSubmit)="operationalPost('/inventory/returns', returnForm)"
+          >
+            <label
+              >Pedido entregado<select
+                name="returnOrder"
+                [(ngModel)]="returnForm.orderId"
+                (ngModelChange)="returnForm.productId = ''"
+                required
+              >
+                <option value="">Seleccionar</option>
+                @for (order of operationOrders(); track order.id) {
+                  <option [value]="order.id">#{{ order.id }} · {{ order.customer.name }}</option>
+                }
+              </select></label
+            >
+            <label
+              >Producto<select name="returnProduct" [(ngModel)]="returnForm.productId" required>
+                <option value="">Seleccionar</option>
+                @for (item of returnProducts(); track item.productId) {
+                  <option [value]="item.productId">
+                    {{ item.name }} · {{ item.quantity }} entregado
+                  </option>
+                }
+              </select></label
+            >
+            <label
+              >Cantidad<input
+                type="number"
+                name="returnQuantity"
+                [(ngModel)]="returnForm.quantity"
+                min="0.01"
+                step="0.01"
+                required
+            /></label>
+            <label
+              >Código del nuevo lote<input
+                name="returnCode"
+                [(ngModel)]="returnForm.code"
+                maxlength="100"
+                required
+            /></label>
+            <label
+              >Almacén<input
+                name="returnWarehouse"
+                [(ngModel)]="returnForm.warehouse"
+                maxlength="150"
+                required
+            /></label>
+            <label
+              >Vencimiento declarado<input
+                type="date"
+                name="returnExpiry"
+                [(ngModel)]="returnForm.expiry"
+                required
+            /></label>
+            <label
+              >Observaciones<textarea
+                name="returnReason"
+                [(ngModel)]="returnForm.reason"
+                maxlength="1000"
+                required
+              ></textarea>
+            </label>
+            <button class="primary" [disabled]="busy() || returnReceipt.invalid">
+              Registrar devolución en cuarentena
+            </button>
+          </form>
+        </section>
+      }
+      @if (page() === 'materias') {
+        @if (can('ADMIN', 'JEFE_PRODUCCION')) {
+          <section class="card business-card">
+            <h2>Agregar materia prima</h2>
+            <form
+              #material="ngForm"
+              class="business-form"
+              (ngSubmit)="operationalPost('/materials', materialForm)"
+            >
+              <label
+                >Nombre<input
+                  name="materialName"
+                  [(ngModel)]="materialForm.name"
+                  maxlength="150"
+                  required /></label
+              ><label
+                >Unidad<input
+                  name="materialUnit"
+                  [(ngModel)]="materialForm.unit"
+                  maxlength="30"
+                  placeholder="kg, g, L…"
+                  required /></label
+              ><button class="primary" [disabled]="busy() || material.invalid">
+                Crear materia prima
+              </button>
+            </form>
+          </section>
+        }
+        <section class="card business-card">
+          <h2>Disponibilidad para producción</h2>
+          <div class="business-grid">
+            @for (material of rawMaterials(); track material.id) {
+              <article>
+                <strong>{{ material.name }}</strong
+                ><span>{{ material.available }} {{ material.unit }} aprobados</span>
+              </article>
+            } @empty {
+              <p>No hay materias primas registradas.</p>
+            }
+          </div>
+        </section>
+        @if (can('ADMIN', 'ALMACENERO')) {
+          <section class="card business-card">
+            <h2>Recibir materia prima</h2>
+            <form
+              #raw="ngForm"
+              class="business-form"
+              (ngSubmit)="operationalPost('/materials/lots', rawReceipt)"
+            >
+              <label
+                >Materia prima<select
+                  name="rawMaterial"
+                  [(ngModel)]="rawReceipt.materialId"
+                  required
+                >
+                  <option value="">Seleccionar</option>
+                  @for (material of rawMaterials(); track material.id) {
+                    <option [value]="material.id">{{ material.name }} ({{ material.unit }})</option>
+                  }
+                </select></label
+              >
+              <label
+                >Código de lote<input
+                  name="rawCode"
+                  [(ngModel)]="rawReceipt.code"
+                  maxlength="100"
+                  required /></label
+              ><label
+                >Cantidad<input
+                  name="rawQuantity"
+                  type="number"
+                  [(ngModel)]="rawReceipt.quantity"
+                  min="0.01"
+                  step="0.01"
+                  required
+              /></label>
+              <label
+                >Almacén<input
+                  name="rawWarehouse"
+                  [(ngModel)]="rawReceipt.warehouse"
+                  maxlength="150"
+                  required /></label
+              ><label
+                >Vencimiento<input
+                  type="date"
+                  name="rawExpiry"
+                  [(ngModel)]="rawReceipt.expiry"
+                  [min]="today"
+                  required /></label
+              ><button class="primary" [disabled]="busy() || raw.invalid">
+                Recibir en cuarentena
+              </button>
+            </form>
+          </section>
+        }
+        <section class="card business-card">
+          <h2>Lotes de materias primas</h2>
+          @for (lot of rawLots(); track lot.id) {
+            <article class="business-lot">
+              <div>
+                <strong>{{ lot.name }} · {{ lot.code }}</strong
+                ><span
+                  >{{ lot.quantity }} {{ lot.unit }} · {{ lot.status }} · vence
+                  {{ lot.expiry | date: 'dd/MM/yyyy' }}</span
+                >
+              </div>
+              @if (can('CALIDAD')) {
+                <label
+                  >Observación<input [(ngModel)]="qualityNotes[lot.id]" maxlength="1000"
+                /></label>
+                <div class="record-actions">
+                  <button
+                    [disabled]="busy() || lot.status === 'APROBADO'"
+                    (click)="
+                      operationalPost('/materials/lots/' + lot.id + '/quality', {
+                        status: 'APROBADO',
+                        note: qualityNotes[lot.id] || '',
+                      })
+                    "
+                  >
+                    Aprobar</button
+                  ><button
+                    [disabled]="busy() || !qualityNotes[lot.id]"
+                    (click)="
+                      operationalPost('/materials/lots/' + lot.id + '/quality', {
+                        status: 'RECHAZADO',
+                        note: qualityNotes[lot.id],
+                      })
+                    "
+                  >
+                    Rechazar</button
+                  ><button
+                    [disabled]="busy() || !qualityNotes[lot.id]"
+                    (click)="
+                      operationalPost('/materials/lots/' + lot.id + '/quality', {
+                        status: 'CUARENTENA',
+                        note: qualityNotes[lot.id],
+                      })
+                    "
+                  >
+                    Cuarentena
+                  </button>
+                </div>
+              }
+            </article>
+          } @empty {
+            <p>No hay lotes registrados.</p>
+          }
+        </section>
+      }
+      @if (page() === 'recetas' && can('ADMIN', 'JEFE_PRODUCCION')) {
+        <section class="card business-card">
+          <h2>Definir receta de fabricación</h2>
+          <p>
+            La receta expresa materias primas para una cantidad de producto terminado. Al planificar
+            se guarda una copia; se descuenta por vencimiento al iniciar la primera etapa.
+          </p>
+          <form
+            #recipe="ngForm"
+            class="business-form"
+            (ngSubmit)="operationalPost('/materials/recipes', recipeForm)"
+          >
+            <label
+              >Producto<select name="recipeProduct" [(ngModel)]="recipeForm.productId" required>
+                <option value="">Seleccionar</option>
+                @for (product of products(); track product.id) {
+                  <option [value]="product.id">{{ product.name }}</option>
+                }
+              </select></label
+            >
+            <label
+              >Cantidad de producto terminado<input
+                type="number"
+                name="recipeOutput"
+                [(ngModel)]="recipeForm.outputQuantity"
+                min="0.01"
+                step="0.01"
+                required
+            /></label>
+            <div class="full-form-field ingredient-editor">
+              <label
+                >Materia prima<select
+                  [(ngModel)]="recipeItem.materialId"
+                  [ngModelOptions]="{ standalone: true }"
+                >
+                  <option value="">Seleccionar</option>
+                  @for (material of rawMaterials(); track material.id) {
+                    <option [value]="material.id">{{ material.name }} · {{ material.unit }}</option>
+                  }
+                </select></label
+              ><label
+                >Cantidad<input
+                  type="number"
+                  [(ngModel)]="recipeItem.quantity"
+                  [ngModelOptions]="{ standalone: true }"
+                  min="0.01"
+                  step="0.01" /></label
+              ><button type="button" (click)="addIngredient()">Añadir ingrediente</button>
+            </div>
+            @for (item of recipeForm.items; track item.materialId) {
+              <div class="business-row full-form-field">
+                <strong>{{ ingredientName(item.materialId) }}</strong
+                ><span>{{ item.quantity }}</span
+                ><button type="button" (click)="recipeForm.items.splice($index, 1)">Quitar</button>
+              </div>
+            }
+            <button
+              class="primary"
+              [disabled]="busy() || recipe.invalid || !recipeForm.items.length"
+            >
+              Guardar nueva versión de receta
+            </button>
+          </form>
+        </section>
+      }
+      @if (['auditoria', 'kardex', 'ajustes', 'recetas'].includes(page())) {
+        <section class="card business-card">
+          <div class="business-directory-heading">
+            <h2>
+              {{
+                page() === 'ajustes'
+                  ? 'Solicitudes registradas'
+                  : page() === 'recetas'
+                    ? 'Recetas activas'
+                    : 'Últimos registros'
+              }}
+            </h2>
+            <input
+              [(ngModel)]="opsSearch"
+              (ngModelChange)="opsPage = 1"
+              aria-label="Buscar registros"
+              placeholder="Buscar…"
+            /><button (click)="loadOperational(page())">Actualizar</button>
+          </div>
+          @for (row of operationPageRows(); track row.id) {
+            <article class="business-lot">
+              @if (page() === 'auditoria') {
+                <div>
+                  <strong>{{ row.actor_name || 'Sistema' }} · {{ row.action }}</strong
+                  ><span>{{ row.resource }}</span
+                  ><small
+                    >{{ row.created_at | date: 'dd/MM/yyyy HH:mm' }} · respuesta
+                    {{ row.status }}</small
+                  >
+                </div>
+              }
+              @if (page() === 'kardex') {
+                <div>
+                  <strong>{{ row.product_name }} · {{ row.code }} · {{ row.kind }}</strong
+                  ><span
+                    >Movimiento {{ row.quantity_delta }} · cambio en reserva
+                    {{ row.reserved_delta }} · saldo {{ row.quantity_after }} · reservado
+                    {{ row.reserved_after }}</span
+                  ><small
+                    >{{ row.reason }} · {{ row.actor_name || 'Sistema' }} ·
+                    {{ row.created_at | date: 'dd/MM/yyyy HH:mm' }}</small
+                  >
+                </div>
+              }
+              @if (page() === 'ajustes') {
+                <div>
+                  <strong>{{ row.product_name }} · {{ row.code }} · {{ row.kind }}</strong
+                  ><span
+                    >{{ row.delta }} · {{ row.status }} · solicitado por
+                    {{ row.requested_name }}</span
+                  >
+                  <p>{{ row.reason }}</p>
+                </div>
+                @if (can('ADMIN') && row.status === 'PENDIENTE') {
+                  <div class="record-actions">
+                    <button
+                      class="primary"
+                      [disabled]="busy()"
+                      (click)="
+                        operationalPost('/inventory/adjustments/' + row.id + '/review', {
+                          approve: true,
+                        })
+                      "
+                    >
+                      Aprobar y aplicar</button
+                    ><button
+                      [disabled]="busy()"
+                      (click)="
+                        operationalPost('/inventory/adjustments/' + row.id + '/review', {
+                          approve: false,
+                        })
+                      "
+                    >
+                      Rechazar
+                    </button>
+                  </div>
+                }
+              }
+              @if (page() === 'recetas') {
+                <div>
+                  <strong>{{ row.product_name }} · receta #{{ row.id }}</strong
+                  ><span>Base: {{ row.output_quantity }} de producto terminado</span>
+                  @for (item of row.items; track item.material_id) {
+                    <small>{{ item.name }}: {{ item.quantity }} {{ item.unit }}</small>
+                  }
+                </div>
+              }
+            </article>
+          } @empty {
+            <p>No hay registros que coincidan.</p>
+          }
+          <div class="business-pagination">
+            <button [disabled]="opsPage <= 1" (click)="opsPage = opsPage - 1">Anterior</button
+            ><span>{{ opsPage }} / {{ operationPageCount() }}</span
+            ><button [disabled]="opsPage >= operationPageCount()" (click)="opsPage = opsPage + 1">
+              Siguiente
+            </button>
+          </div>
+        </section>
+      }
+
       @if (page() === 'panel') {
         @if (can('ADMIN')) {
           <section class="admin-intro">
@@ -2001,6 +2760,56 @@
                       </div>
                     }
                   </div>
+                }
+                @if (page() === 'pedidos' && can('ADMIN', 'CLIENTE')) {
+                  <div class="payment-information">
+                    @if (r.reservationExpiresAt && r.status === 'PENDIENTE_PAGO') {
+                      <p>
+                        <strong
+                          >Pago antes de
+                          {{ r.reservationExpiresAt | date: 'dd/MM/yyyy HH:mm' }}</strong
+                        >. Al vencer se liberará el stock reservado.
+                      </p>
+                    }
+                    @if (r.paymentNote) {
+                      <p>Verificación de pago: {{ r.paymentNote }}</p>
+                    }
+                    @for (proof of r.proofs || []; track proof.id) {
+                      <button [disabled]="busy()" (click)="openProof(r.id, proof.id)">
+                        Descargar comprobante #{{ proof.id }}
+                      </button>
+                    }
+                    @if (['PENDIENTE_REVISION', 'PENDIENTE_PAGO'].includes(r.status)) {
+                      <label
+                        >Adjuntar comprobante<input
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp,application/pdf"
+                          (change)="proofFile(r, $event)"
+                          [disabled]="busy()"
+                        /><small
+                          >Hasta 3 MB. El archivo no confirma el pago automáticamente.</small
+                        ></label
+                      >
+                    }
+                    @if (can('ADMIN') && r.status === 'PENDIENTE_PAGO') {
+                      <label
+                        >Referencia o nota de verificación<input
+                          [(ngModel)]="paymentNotes[r.id]"
+                          maxlength="1000"
+                          placeholder="Transferencia, referencia bancaria, revisión del comprobante…"
+                      /></label>
+                    }
+                  </div>
+                }
+                @if (page() === 'produccion' && r.consumptions?.length) {
+                  <details class="production-consumptions">
+                    <summary>Materias primas consumidas</summary>
+                    @for (item of r.consumptions; track $index) {
+                      <p>
+                        {{ item.name }} · lote {{ item.code }}: {{ item.quantity }} {{ item.unit }}
+                      </p>
+                    }
+                  </details>
                 }
                 <div class="record-actions">
                   @if (
