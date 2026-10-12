@@ -1,0 +1,2206 @@
+@if (!workspaceActive()) {
+  <div class="reading-progress" aria-hidden="true"></div>
+  <header class="navbar" [class.scrolled]="scrolled">
+    <div class="nav-shell">
+      <button class="brand" aria-label="VITNA, ir al inicio" (click)="navigate('inicio')">
+        <img src="vitna-logo.png" alt="VITNA" width="160" height="81" /></button
+      ><button
+        class="menu-toggle"
+        (click)="menuOpen = !menuOpen"
+        [attr.aria-expanded]="menuOpen"
+        aria-controls="main-navigation"
+        aria-label="Abrir menú"
+      >
+        <app-icon name="menu" />
+      </button>
+      <nav id="main-navigation" [class.open]="menuOpen" aria-label="Navegación principal">
+        <button [class.active]="page() === 'inicio'" (click)="navigate('inicio')">Inicio</button
+        ><button [class.active]="page() === 'catalogo'" (click)="navigate('catalogo')">
+          Catálogo</button
+        ><button (click)="buyingGuide()">Cómo comprar</button><span class="nav-divider"></span>
+        @if (user()) {
+          <button class="account-button" (click)="navigate('panel')">
+            <span class="avatar">{{ user().name.charAt(0) }}</span> Mi cuenta</button
+          ><button (click)="logout()">Salir ↗</button>
+        } @else {
+          <button class="primary" [class.active]="page() === 'login'" (click)="navigate('login')">
+            Ingresar <span>↗</span>
+          </button>
+        }
+      </nav>
+    </div>
+  </header>
+}
+@if (message()) {
+  <div role="status" aria-live="polite" class="notice toast-notice" [attr.data-kind]="noticeKind()">
+    <span class="toast-icon"
+      ><app-icon
+        [name]="
+          noticeKind() === 'error' ? 'shield' : noticeKind() === 'success' ? 'check' : 'chat'
+        " /></span
+    ><span class="toast-message">{{ message() }}</span
+    ><button type="button" (click)="message.set('')" aria-label="Cerrar notificación">
+      <app-icon name="close" />
+    </button>
+  </div>
+}
+@if (page() === 'inicio') {
+  <section class="hero cinematic-hero">
+    <img
+      class="hero-photograph"
+      src="food-editorial.webp"
+      alt="Composición ilustrativa de cereales y cacao"
+      fetchpriority="high"
+    />
+    <div class="hero-shade"></div>
+    <div class="hero-atmosphere" aria-hidden="true"><i></i><i></i><i></i></div>
+    <div class="hero-copy">
+      <span class="eyebrow"><span class="hero-dot"></span> VITNA · AYACUCHO, PERÚ</span>
+      <h1>
+        <span class="hero-line"><span>De nuestra tierra.</span></span
+        ><em
+          ><span class="hero-line"><span>Para tus mejores</span></span
+          ><span class="hero-line"><span>momentos.</span></span></em
+        >
+      </h1>
+      <p>
+        El encuentro entre cereales, cacao y sabores que nos conectan. Descubre lo que tenemos para
+        ti.
+      </p>
+      <div class="hero-actions">
+        <button class="primary" (click)="navigate('catalogo')">
+          Explorar nuestros productos <span>↗</span></button
+        ><button class="hero-text-button" (click)="buyingGuide()">Cómo comprar →</button>
+      </div>
+      <div class="hero-bottom-note">
+        <span class="hero-note-line"></span> ORIGEN AYACUCHANO · ATENCIÓN PERSONALIZADA
+      </div>
+    </div>
+    <div class="hero-editorial-label">
+      <span>01 / LA ESENCIA</span><strong>Cereales.<br />Cacao.<br />VITNA.</strong
+      ><small>Imagen ilustrativa</small>
+    </div>
+    <button
+      class="scroll-cue"
+      (click)="scrollNext()"
+      aria-label="Bajar a descubrir nuestros productos"
+    >
+      <span class="scroll-track"><i></i></span><span>DESLIZA PARA DESCUBRIR</span><b>↓</b>
+    </button>
+  </section>
+  <div class="brand-strip animated-brand-strip">
+    <span><app-icon name="leaf" /> ORIGEN AYACUCHANO</span
+    ><span><app-icon name="sun" /> CEREALES</span><span><app-icon name="box" /> CHOCOLATES</span
+    ><span><app-icon name="chat" /> ATENCIÓN PERSONALIZADA</span>
+  </div>
+  <section class="intro collections" id="collections">
+    <div class="section-heading" reveal>
+      <div>
+        <span class="eyebrow">DESCUBRE VITNA</span>
+        <h2>Un mundo de sabores,<br />una misma esencia.</h2>
+      </div>
+      <p>Explora nuestras líneas y consulta las presentaciones disponibles con nuestro equipo.</p>
+    </div>
+    <div class="collection-grid">
+      <button class="collection cereal" reveal (click)="browse('Cereales')">
+        <span class="collection-number">01 / CEREALES</span
+        ><img
+          class="collection-photo"
+          src="food-editorial.webp"
+          alt="Cereales en una composición ilustrativa"
+          loading="lazy"
+        /><span class="collection-shade"></span>
+        <h3>Empieza con<br />buena energía.</h3>
+        <span class="collection-link">Explorar cereales <app-icon name="arrow" /></span></button
+      ><button class="collection chocolate" reveal (click)="browse('Chocolates')">
+        <span class="collection-number">02 / CHOCOLATES</span
+        ><img
+          class="collection-photo"
+          src="cacao-editorial.webp"
+          alt="Chocolate y cacao en una composición ilustrativa"
+          loading="lazy"
+        /><span class="collection-shade"></span>
+        <h3>Un momento<br />para disfrutar.</h3>
+        <span class="collection-link">Explorar chocolates <app-icon name="arrow" /></span>
+      </button>
+    </div>
+  </section>
+  <section class="origin-story">
+    <div class="origin-image" reveal>
+      <img
+        src="food-editorial.webp"
+        alt="Cereales y cacao, imagen ilustrativa"
+        loading="lazy"
+      /><span class="image-caption">EL ORIGEN NOS INSPIRA</span>
+    </div>
+    <div class="origin-story-copy" reveal>
+      <span class="eyebrow">NUESTRA IDENTIDAD</span>
+      <h2>Sabores que cuentan<br /><em>de dónde venimos.</em></h2>
+      <p>
+        Desde Ayacucho, VITNA reúne sus líneas de cereales y chocolates en una propuesta para
+        acompañar tu día a día.
+      </p>
+      <div class="origin-details">
+        <div>
+          <span><app-icon name="leaf" /></span><strong>Cereales para cada momento</strong>
+        </div>
+        <div>
+          <span><app-icon name="box" /></span><strong>El carácter del cacao</strong>
+        </div>
+        <div>
+          <span><app-icon name="chat" /></span><strong>Una atención cercana</strong>
+        </div>
+      </div>
+      <button class="text-link" (click)="navigate('catalogo')">Conoce nuestras líneas ↗</button>
+    </div>
+  </section>
+  <section class="buy-guide" id="como-comprar">
+    <div reveal>
+      <span class="eyebrow">CERCA DE TI</span>
+      <h2>Comprar empieza<br />con un «hola».</h2>
+      <p>Te acompañamos desde tu primera consulta hasta tu pedido.</p>
+      <button class="primary" (click)="navigate('catalogo')">Encuentra tu producto ↗</button>
+    </div>
+    <ol>
+      <li reveal>
+        <span><app-icon name="search" /></span>
+        <div>
+          <h3>Elige lo que te gusta</h3>
+          <p>Explora el catálogo y selecciona «Más información».</p>
+        </div>
+      </li>
+      <li reveal>
+        <span><app-icon name="chat" /></span>
+        <div>
+          <h3>Conversemos por WhatsApp</h3>
+          <p>Consulta las presentaciones y solicita tu cuenta al administrador.</p>
+        </div>
+      </li>
+      <li reveal>
+        <span><app-icon name="orders" /></span>
+        <div>
+          <h3>Haz tu pedido</h3>
+          <p>Con tu cuenta autorizada podrás comprar y seguir tus pedidos.</p>
+        </div>
+      </li>
+    </ol>
+  </section>
+  <section class="cta brand-cta" reveal>
+    <span class="eyebrow">SABORES QUE NOS CONECTAN</span>
+    <h2>Tu próximo favorito<br />te espera en VITNA.</h2>
+    <button (click)="navigate('catalogo')">Conocer productos ↗</button>
+  </section>
+}
+<ng-template #catalogTemplate>
+  <section class="catalog-heading">
+    <div>
+      <span class="eyebrow">DEL ORIGEN A TU MESA</span>
+      <h1>
+        {{ can('CLIENTE') ? 'Compra productos VITNA' : 'Descubre nuestro catálogo' }}<span>.</span>
+      </h1>
+      <p>
+        {{
+          can('CLIENTE')
+            ? 'Consulta el stock, arma tu pedido y elige la dirección de entrega.'
+            : 'Explora sabores, encuentra tu presentación y conversa con nosotros.'
+        }}
+      </p>
+    </div>
+    @if (can('ADMIN')) {
+      <button class="primary" (click)="openProduct()">
+        <app-icon name="plus" /> Agregar producto
+      </button>
+    }
+  </section>
+  <div class="catalog-layout">
+    <aside class="filter-panel">
+      <div class="filter-title">
+        <h2><app-icon name="filter" /> Filtros</h2>
+        <button (click)="resetFilters()">Limpiar</button>
+      </div>
+      <label for="product-search">Buscar producto</label>
+      <div class="search-field">
+        <app-icon name="search" /><input
+          id="product-search"
+          [(ngModel)]="filter"
+          placeholder="Nombre o ingrediente…"
+        />
+      </div>
+      <fieldset>
+        <legend>Categorías</legend>
+        <label class="radio-option"
+          ><input
+            type="radio"
+            name="category"
+            value="Todas"
+            [(ngModel)]="category"
+            (ngModelChange)="presentation = 'Todas'"
+          />
+          Todas las categorías <small>{{ products().length }}</small></label
+        >
+        @for (c of categories(); track c) {
+          <label class="radio-option"
+            ><input
+              type="radio"
+              name="category"
+              [value]="c"
+              [(ngModel)]="category"
+              (ngModelChange)="presentation = 'Todas'"
+            />
+            {{ c }}</label
+          >
+        }
+      </fieldset>
+      <label for="presentation-filter">Presentación</label
+      ><select id="presentation-filter" [(ngModel)]="presentation">
+        <option>Todas</option>
+        @for (p of presentations(); track p) {
+          <option>{{ p }}</option>
+        }
+      </select>
+      <div class="filter-help">
+        <span>¿Tu primera compra?</span>
+        <p>Consulta un producto por WhatsApp y solicita tu cuenta.</p>
+        <button (click)="buyingGuide()">Conoce los pasos →</button>
+      </div>
+    </aside>
+    <section class="catalog-results">
+      <div class="results-toolbar">
+        <p>
+          <strong>{{ visibleProducts().length }}</strong> productos encontrados
+        </p>
+        <label for="product-sort"
+          >Ordenar por
+          <select id="product-sort" [(ngModel)]="sort">
+            <option value="name">Nombre: A–Z</option>
+            <option value="newest">Más recientes</option>
+            @if (can('CLIENTE', 'ADMIN')) {
+              <option value="price-asc">Precio: menor a mayor</option>
+              <option value="price-desc">Precio: mayor a menor</option>
+            }
+          </select></label
+        >
+      </div>
+      <div class="catalog-grid">
+        @for (p of visibleProducts(); track p.id) {
+          <article class="product premium-product">
+            <div class="product-art" [class.cocoa]="p.category === 'Chocolates'">
+              <span class="category-tag">{{ p.category }}</span>
+              <div class="mini-pack">
+                <img src="vitna-logo.png" alt="VITNA" width="100" height="50" /><strong>{{
+                  p.category
+                }}</strong
+                ><small>{{ p.presentation }}</small>
+              </div>
+              <span class="art-caption">Presentación ilustrativa</span>
+            </div>
+            <div class="product-body">
+              <small>{{ p.presentation }}</small>
+              <h3>{{ p.name }}</h3>
+              <p>{{ p.description }}</p>
+              @if (can('CLIENTE')) {
+                <strong class="product-price">{{ p.price | currency: 'PEN' : 'S/ ' }}</strong
+                ><span class="stock-label" [class.out-of-stock]="(p.availableStock || 0) < 1">{{
+                  (p.availableStock || 0) < 1
+                    ? 'Sin stock disponible'
+                    : p.availableStock + ' unidades disponibles'
+                }}</span
+                ><button
+                  class="primary"
+                  [disabled]="busy() || cartQuantity(p.id) + 1 > (p.availableStock || 0)"
+                  (click)="add(p)"
+                >
+                  ＋ Agregar al pedido
+                </button>
+              } @else {
+                <button class="product-contact" (click)="contact(p)">
+                  Más información <span>↗</span>
+                </button>
+              }
+              @if (can('ADMIN')) {
+                <span class="publication-status">{{ p.published ? 'Publicado' : 'Oculto' }}</span
+                ><button (click)="edit(p)">Editar producto</button>
+              }
+            </div>
+          </article>
+        }
+      </div>
+      @if (visibleProducts().length === 0) {
+        <div class="empty-results">
+          <app-icon name="search" />
+          <h2>No encontramos coincidencias</h2>
+          <p>Prueba con otro nombre o ajusta los filtros.</p>
+          <button (click)="resetFilters()">Limpiar filtros</button>
+        </div>
+      }
+      @if (can('CLIENTE') && cart().length) {
+        <section class="card order-summary">
+          <span class="eyebrow">TU SELECCIÓN</span>
+          <h2>
+            Tu pedido
+            <small>{{ cart().length }} {{ cart().length === 1 ? 'producto' : 'productos' }}</small>
+          </h2>
+          @for (i of cart(); track i.product.id) {
+            <div class="row">
+              <strong>{{ i.product.name }}</strong>
+              <div class="quantity-controls">
+                <button
+                  aria-label="Reducir cantidad"
+                  (click)="changeQuantity(i.product.id, -1)"
+                  [disabled]="i.quantity === 1"
+                >
+                  −</button
+                ><span>{{ i.quantity }} {{ i.quantity === 1 ? 'unidad' : 'unidades' }}</span
+                ><button
+                  aria-label="Aumentar cantidad"
+                  [disabled]="cartQuantity(i.product.id) + 1 > (productStock(i.product.id) || 0)"
+                  (click)="changeQuantity(i.product.id, 1)"
+                >
+                  ＋
+                </button>
+              </div>
+              <button (click)="remove(i.product.id)">Quitar</button>
+            </div>
+          }
+          @if (!cartAvailable()) {
+            <p class="field-error">
+              Cambió el stock de tu selección. Ajusta las cantidades o quita los productos sin
+              disponibilidad.
+            </p>
+          }
+          <p class="summary-total">Total: {{ total() | currency: 'PEN' : 'S/ ' }}</p>
+          <label for="delivery-address">Dirección de entrega</label
+          ><input
+            id="delivery-address"
+            [(ngModel)]="address"
+            maxlength="300"
+            placeholder="Ingresa la dirección de entrega"
+          /><button
+            class="primary"
+            [disabled]="busy() || !address.trim() || !cartAvailable()"
+            (click)="checkout()"
+          >
+            Enviar pedido para revisión →
+          </button>
+        </section>
+      }
+    </section>
+  </div>
+</ng-template>
+@if (page() === 'catalogo') {
+  <ng-container [ngTemplateOutlet]="catalogTemplate" />
+}
+@if (page() === 'login') {
+  <main class="auth-page premium-auth">
+    <section class="auth-story">
+      <img
+        class="auth-photo"
+        src="cacao-editorial.webp"
+        alt="Cacao y chocolate, fotografía ilustrativa"
+      />
+      <div class="auth-photo-shade"></div>
+      <span class="eyebrow">BIENVENIDO A VITNA</span>
+      <h2>Tu siguiente<br />gran momento<br /><em>empieza aquí.</em></h2>
+      <p>Un espacio para nuestros clientes y el equipo que hace posible cada producto.</p>
+      <div class="auth-photo-caption">
+        <span>VITNA / AYACUCHO</span><small>Imagen ilustrativa de nuestra línea de cacao</small>
+      </div>
+      <div class="auth-story-bottom">
+        <span>01 — CONOCE</span><span>02 — ELIGE</span><span>03 — DISFRUTA</span>
+      </div>
+    </section>
+    <section class="auth-form-section">
+      <div class="auth-form-inner">
+        <span class="auth-icon"><app-icon name="shield" /></span>
+        <h1>Qué bueno verte<br />de nuevo.</h1>
+        <p>Ingresa tus datos para acceder a tu cuenta.</p>
+        <form #loginForm="ngForm" (ngSubmit)="login()">
+          @if (loginError()) {
+            <div class="inline-error" role="alert">
+              <app-icon name="shield" />{{ loginError() }}
+            </div>
+          }
+          <label for="login-email">Correo electrónico</label
+          ><input
+            id="login-email"
+            type="email"
+            name="email"
+            [(ngModel)]="email"
+            (ngModelChange)="loginError.set('')"
+            autocomplete="username"
+            placeholder="tu.correo@ejemplo.com"
+            required
+            email
+          /><label for="login-password">Contraseña</label>
+          <div class="password-field">
+            <input
+              id="login-password"
+              [type]="showPassword ? 'text' : 'password'"
+              name="password"
+              [(ngModel)]="password"
+              (ngModelChange)="loginError.set('')"
+              autocomplete="current-password"
+              placeholder="Ingresa tu contraseña"
+              required
+            /><button
+              type="button"
+              (click)="showPassword = !showPassword"
+              [attr.aria-label]="showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+            >
+              {{ showPassword ? 'Ocultar' : 'Mostrar' }}
+            </button>
+          </div>
+          <button class="primary auth-submit" [disabled]="busy() || loginForm.invalid">
+            {{ busy() ? 'Ingresando…' : 'Ingresar a mi cuenta' }} <span>→</span>
+          </button>
+        </form>
+        <div class="account-request">
+          <strong>¿Todavía no tienes una cuenta?</strong>
+          <p>El administrador creará tu acceso después de atender tu solicitud por WhatsApp.</p>
+          <button (click)="navigate('catalogo')">Explorar productos y solicitar acceso ↗</button>
+        </div>
+        <small class="auth-security">Acceso exclusivo para cuentas autorizadas.</small>
+      </div>
+    </section>
+  </main>
+}
+@if (productDialog && can('ADMIN')) {
+  <div class="modal-backdrop" (click)="productDialog = false">
+    <section
+      class="product-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="new-product-title"
+      (click)="$event.stopPropagation()"
+      (keydown)="dialogKey($event)"
+    >
+      <div class="modal-heading">
+        <div>
+          <span class="eyebrow">ADMINISTRACIÓN DEL CATÁLOGO</span>
+          <h2 id="new-product-title">{{ form.id ? 'Editar producto' : 'Agregar producto' }}</h2>
+        </div>
+        <button aria-label="Cerrar formulario" (click)="productDialog = false">✕</button>
+      </div>
+      <form #productForm="ngForm" (ngSubmit)="saveCatalogProduct()">
+        <ng-container [ngTemplateOutlet]="formErrorsTemplate" />
+        <div class="form-columns">
+          <label
+            >Código SKU<input
+              name="sku"
+              [(ngModel)]="form.sku"
+              placeholder="Ej. CER-004"
+              maxlength="60"
+              required /></label
+          ><label
+            >Nombre del producto<input
+              name="name"
+              [(ngModel)]="form.name"
+              placeholder="Nombre comercial"
+              maxlength="150"
+              required /></label
+          ><label
+            >Categoría<input
+              name="category"
+              [(ngModel)]="form.category"
+              maxlength="100"
+              required /></label
+          ><label
+            >Presentación<input
+              name="presentation"
+              [(ngModel)]="form.presentation"
+              placeholder="Ej. Bolsa 250 g"
+              maxlength="150"
+              required
+          /></label>
+        </div>
+        <section class="barcode-editor">
+          <div>
+            <label for="product-barcode">Código de barras</label
+            ><button type="button" (click)="generateBarcode()" [disabled]="busy()">
+              Generar código
+            </button>
+          </div>
+          <input
+            id="product-barcode"
+            name="barcode"
+            [(ngModel)]="form.barcode"
+            maxlength="48"
+            placeholder="Escanea, escribe o deja vacío para generar"
+          /><small
+            >Si lo dejas vacío, se asigna automáticamente al guardar. Al editar, se conserva el
+            código actual.</small
+          >
+          @if (!barcodeValid()) {
+            <p class="field-error">Usa entre 4 y 48 caracteres sin espacios ni tildes.</p>
+          }
+          @if (form.barcode && barcodeValid()) {
+            <app-barcode [value]="form.barcode" />
+          }
+        </section>
+        <label
+          >Descripción<textarea
+            name="description"
+            [(ngModel)]="form.description"
+            rows="3"
+            placeholder="Información del producto"
+            maxlength="2000"
+            required
+          ></textarea></label
+        ><label
+          >Precio (S/)<input
+            name="price"
+            type="number"
+            min="0"
+            step="0.01"
+            [(ngModel)]="form.price"
+            required /></label
+        ><label class="publish-option"
+          ><input name="published" type="checkbox" [(ngModel)]="form.published" /> Publicar en el
+          catálogo público</label
+        >
+        <div class="modal-actions">
+          <button type="button" (click)="productDialog = false">Cancelar</button
+          ><button class="primary" [disabled]="busy() || productForm.invalid || !barcodeValid()">
+            {{ busy() ? 'Guardando…' : form.id ? 'Guardar cambios' : 'Crear producto' }}
+          </button>
+        </div>
+      </form>
+    </section>
+  </div>
+}
+@if (user() && !['inicio', 'catalogo', 'login'].includes(page())) {
+  <div
+    class="workspace professional-workspace"
+    [class.internal-admin]="true"
+    [class.sidebar-collapsed]="sidebarCollapsed"
+  >
+    <button
+      class="workspace-menu"
+      (click)="sidebarOpen = !sidebarOpen"
+      [attr.aria-expanded]="sidebarOpen"
+      aria-controls="workspace-sidebar"
+    >
+      <app-icon name="menu" /> Menú de gestión
+    </button>
+    @if (sidebarOpen) {
+      <button
+        class="sidebar-scrim"
+        aria-label="Cerrar menú de gestión"
+        (click)="sidebarOpen = false"
+      ></button>
+    }
+    <aside
+      id="workspace-sidebar"
+      class="admin-sidebar"
+      [class.mobile-open]="sidebarOpen"
+      aria-label="Menú de gestión"
+    >
+      <div class="sidebar-heading">
+        <div class="workspace-brand">
+          <span class="brand-mark"><app-icon name="leaf" /></span>
+          <div>
+            <strong>VITNA</strong><small>{{ can('CLIENTE') ? 'MI CUENTA' : roleLabel() }}</small>
+          </div>
+        </div>
+        <button
+          class="collapse-sidebar"
+          (click)="sidebarCollapsed = !sidebarCollapsed"
+          [attr.aria-label]="sidebarCollapsed ? 'Expandir sidebar' : 'Contraer sidebar'"
+          [attr.aria-expanded]="!sidebarCollapsed"
+        >
+          <app-icon name="chevron" />
+        </button>
+      </div>
+      <nav class="sidebar-nav" aria-label="Secciones del sistema">
+        <span class="nav-group">GENERAL</span
+        ><button
+          [class.selected]="page() === 'panel'"
+          [attr.aria-current]="page() === 'panel' ? 'page' : null"
+          title="Vista general"
+          (click)="navigate('panel')"
+        >
+          <app-icon name="home" /><span>Vista general</span>
+        </button>
+        @if (can('ADMIN')) {
+          <span class="nav-group">ADMINISTRACIÓN</span
+          ><button
+            [class.selected]="page() === 'usuarios'"
+            [attr.aria-current]="page() === 'usuarios' ? 'page' : null"
+            title="Usuarios y clientes"
+            (click)="navigate('usuarios')"
+          >
+            <app-icon name="users" /><span>Usuarios y clientes</span></button
+          ><button
+            [class.selected]="page() === 'productos'"
+            [attr.aria-current]="page() === 'productos' ? 'page' : null"
+            title="Productos"
+            (click)="navigate('productos')"
+          >
+            <app-icon name="box" /><span>Productos</span>
+          </button>
+        }
+        <span class="nav-group">OPERACIONES</span>
+        @if (can('CLIENTE')) {
+          <button [class.selected]="page() === 'comprar'" (click)="navigate('comprar')">
+            <app-icon name="box" /><span>Comprar productos</span>
+          </button>
+        }
+        @if (can('ADMIN', 'CLIENTE', 'ALMACENERO')) {
+          <button
+            [class.selected]="page() === 'pedidos'"
+            [attr.aria-current]="page() === 'pedidos' ? 'page' : null"
+            title="Pedidos"
+            (click)="navigate('pedidos')"
+          >
+            <app-icon name="orders" /><span>{{
+              can('CLIENTE')
+                ? 'Mis pedidos'
+                : can('ALMACENERO')
+                  ? 'Preparación y despachos'
+                  : 'Pedidos'
+            }}</span>
+          </button>
+        }
+        @if (can('ADMIN', 'ALMACENERO', 'JEFE_PRODUCCION', 'CALIDAD')) {
+          <button
+            [class.selected]="page() === 'inventario'"
+            [attr.aria-current]="page() === 'inventario' ? 'page' : null"
+            title="Inventario y lotes"
+            (click)="navigate('inventario')"
+          >
+            <app-icon name="warehouse" /><span>Inventario y lotes</span>
+          </button>
+        }
+        @if (can('ADMIN', 'JEFE_PRODUCCION', 'TRABAJADOR', 'CALIDAD')) {
+          <button
+            [class.selected]="page() === 'produccion'"
+            [attr.aria-current]="page() === 'produccion' ? 'page' : null"
+            title="Producción"
+            (click)="navigate('produccion')"
+          >
+            <app-icon name="factory" /><span>{{
+              can('TRABAJADOR') ? 'Mis tareas' : 'Producción'
+            }}</span>
+          </button>
+        }
+        @if (can('CALIDAD')) {
+          <button
+            [class.selected]="page() === 'calidad'"
+            title="Control de calidad"
+            (click)="navigate('calidad')"
+          >
+            <app-icon name="shield" /><span>Control de calidad</span>
+          </button>
+        }
+      </nav>
+      <div class="sidebar-bottom">
+        <button
+          class="public-shortcut"
+          [attr.title]="can('CLIENTE') ? 'Ver el sitio de VITNA' : 'Ver catálogo público'"
+          (click)="navigate(can('CLIENTE') ? 'inicio' : 'catalogo')"
+        >
+          <app-icon name="arrow" /><span>{{
+            can('CLIENTE') ? 'Sitio VITNA' : 'Catálogo público'
+          }}</span>
+        </button>
+        <div class="sidebar-profile">
+          <span class="profile-avatar">{{ user().name.charAt(0) }}</span>
+          <div>
+            <strong>{{ user().name }}</strong
+            ><small>{{ roleLabel() }}</small>
+          </div>
+        </div>
+        <button class="sidebar-logout" title="Cerrar sesión" (click)="logout()">
+          <app-icon name="logout" /><span>Cerrar sesión</span>
+        </button>
+      </div>
+    </aside>
+    <main class="workspace-main" [class.summary-dashboard]="page() === 'panel' && can('ADMIN')">
+      <header class="workspace-toolbar">
+        <nav aria-label="Ruta de navegación">
+          <button (click)="navigate('panel')"><app-icon name="home" /> Mi panel</button
+          ><span aria-hidden="true">/</span><strong>{{ pageTitle() }}</strong>
+        </nav>
+        <div>
+          <span class="workspace-date"><app-icon name="clock" />{{ currentDate }}</span
+          ><span class="workspace-role"><i></i>{{ roleLabel() }}</span
+          ><button
+            aria-label="Ver la portada de VITNA"
+            title="Ver la portada de VITNA"
+            (click)="navigate('inicio')"
+          >
+            <app-icon name="arrow" />
+          </button>
+        </div>
+      </header>
+      @if (!['usuarios', 'productos', 'comprar'].includes(page()) && page() !== 'panel') {
+        <div class="workspace-title">
+          <div>
+            <h1>{{ pageTitle() }}</h1>
+            @if (pageDescription()) {
+              <p>{{ pageDescription() }}</p>
+            }
+          </div>
+          <div class="page-heading-actions">
+            @if (
+              (page() === 'inventario' && can('ADMIN', 'ALMACENERO')) ||
+              (page() === 'produccion' && can('JEFE_PRODUCCION'))
+            ) {
+              <button
+                class="primary"
+                (click)="toggleOperationForm()"
+                [attr.aria-expanded]="showOperationForm"
+              >
+                <app-icon [name]="showOperationForm ? 'close' : 'plus'" />{{
+                  showOperationForm
+                    ? 'Cerrar formulario'
+                    : page() === 'inventario'
+                      ? 'Recibir lote'
+                      : 'Planificar fabricación'
+                }}
+              </button>
+            }
+          </div>
+        </div>
+      }
+      @if (['pedidos', 'inventario', 'produccion', 'calidad'].includes(page())) {
+        <div class="page-metrics">
+          @for (metric of recordMetrics(); track metric.label) {
+            <article>
+              <small>{{ metric.label }}</small
+              ><strong>{{ recordsLoading() ? '…' : recordsError() ? '—' : metric.value }}</strong>
+            </article>
+          }
+        </div>
+      }
+      @if (page() === 'comprar') {
+        <section class="customer-shop">
+          <ng-container [ngTemplateOutlet]="catalogTemplate" />
+        </section>
+      }
+      @if (page() === 'panel') {
+        @if (can('ADMIN')) {
+          <section class="admin-intro">
+            <div>
+              <span class="eyebrow">ADMINISTRACIÓN · VITNA</span>
+              <h1>Una visión clara de tu operación.</h1>
+              <p>
+                Hola, {{ user().name }}. Revisa tus pendientes y coordina el trabajo de tu equipo.
+              </p>
+            </div>
+            <div class="admin-intro-actions">
+              <button class="primary" (click)="openProduct()">
+                <app-icon name="plus" /> Nuevo producto</button
+              ><button (click)="createAccountShortcut()">
+                <app-icon name="users" /> Crear cuenta
+              </button>
+            </div>
+          </section>
+          <div class="summary-heading">
+            <h2>Resumen de operación</h2>
+            <button (click)="loadDashboard()" [disabled]="dashboardLoading()">
+              <app-icon name="refresh" /> {{ dashboardLoading() ? 'Actualizando…' : 'Actualizar' }}
+            </button>
+          </div>
+          @if (dashboardError()) {
+            <p class="dashboard-warning" role="status">
+              No se pudieron consultar algunos datos. Puedes volver a actualizarlos.
+            </p>
+          }
+          <div class="dashboard-stats admin-metrics">
+            <article>
+              <span class="stat-icon"><app-icon name="box" /></span><small>Productos</small
+              ><strong>{{ products().length }}</strong
+              ><span
+                ><b>{{ publishedCount() }}</b> publicados <app-icon name="check"
+              /></span>
+            </article>
+            <article>
+              <span class="stat-icon green"><app-icon name="users" /></span
+              ><small>Clientes registrados</small
+              ><strong>{{ dashboardLoading() ? '…' : (clientCount() ?? '—') }}</strong
+              ><span>Clientes</span>
+            </article>
+            <article>
+              <span class="stat-icon amber"><app-icon name="clock" /></span
+              ><small>Pedidos por revisar</small
+              ><strong>{{ dashboardLoading() ? '…' : (pendingOrders() ?? '—') }}</strong
+              ><button class="metric-link" (click)="navigate('pedidos')">
+                Ir a pedidos <app-icon name="arrow" />
+              </button>
+            </article>
+            <article>
+              <span class="stat-icon purple"><app-icon name="warehouse" /></span
+              ><small>Lotes registrados</small
+              ><strong>{{ dashboardLoading() ? '…' : (dashboardLots()?.length ?? '—') }}</strong
+              ><span>Lotes</span>
+            </article>
+          </div>
+          <div class="dashboard-body">
+            <section class="dashboard-card catalog-overview">
+              <div class="dashboard-card-heading">
+                <div><h2>Publicación del catálogo</h2></div>
+                <app-icon name="chart" />
+              </div>
+              <div class="catalog-chart">
+                <div
+                  class="publication-ring svg-donut"
+                  role="img"
+                  [attr.aria-label]="
+                    publicationRate() +
+                    '% del catálogo publicado: ' +
+                    publishedCount() +
+                    ' de ' +
+                    products().length +
+                    ' productos'
+                  "
+                >
+                  <svg viewBox="0 0 180 180" aria-hidden="true">
+                    <circle class="donut-track" cx="90" cy="90" r="68" />
+                    <circle
+                      class="donut-value"
+                      cx="90"
+                      cy="90"
+                      r="68"
+                      pathLength="100"
+                      [attr.stroke-dasharray]="publicationRate() + ' 100'"
+                      [style.--arc]="publicationRate()"
+                    />
+                  </svg>
+                  <div class="donut-center">
+                    <strong>{{ publicationRate() }}<small>%</small></strong
+                    ><span>Publicado</span>
+                  </div>
+                </div>
+                <div class="chart-legend">
+                  <span
+                    ><i></i> Publicados <strong>{{ publishedCount() }}</strong></span
+                  ><span
+                    ><i></i> Sin publicar
+                    <strong>{{ products().length - publishedCount() }}</strong></span
+                  >
+                </div>
+              </div>
+              <div class="chart-subheading">Productos por categoría</div>
+              <div class="category-breakdown">
+                @for (c of categories(); track c) {
+                  <div>
+                    <span>{{ c }}</span
+                    ><strong>{{ categoryCount(c) }}</strong>
+                    <div class="category-bar">
+                      <i
+                        [style.width.%]="
+                          products().length ? (categoryCount(c) / products().length) * 100 : 0
+                        "
+                      ></i>
+                    </div>
+                  </div>
+                }
+              </div>
+              <button class="dashboard-text-link" (click)="navigate('productos')">
+                Administrar catálogo <app-icon name="arrow" />
+              </button>
+            </section>
+            <section class="dashboard-card recent-orders">
+              <div class="dashboard-card-heading">
+                <div><h2>Últimos pedidos</h2></div>
+                <app-icon name="orders" />
+              </div>
+              @if (dashboardLoading()) {
+                <p class="dashboard-empty">Consultando pedidos…</p>
+              } @else if (dashboardOrders() === null) {
+                <p class="dashboard-empty">Los pedidos no están disponibles en este momento.</p>
+              } @else if (dashboardOrders()?.length) {
+                @for (o of recentOrders(); track o.id) {
+                  <div class="recent-order">
+                    <span class="order-icon"><app-icon name="orders" /></span>
+                    <div>
+                      <strong>Pedido #{{ o.id }}</strong
+                      ><small>{{ o.customer?.name || 'Cliente' }}</small>
+                    </div>
+                    <span class="order-status">{{ statusLabel(o.status) }}</span>
+                  </div>
+                }
+              } @else {
+                <div class="order-empty">
+                  <span><app-icon name="orders" /></span>
+                  <h3>Sin pedidos registrados</h3>
+                </div>
+              }
+              <button class="dashboard-text-link" (click)="navigate('pedidos')">
+                Ver todos los pedidos <app-icon name="arrow" />
+              </button>
+            </section>
+          </div>
+          <div class="dashboard-body operational-charts">
+            <section class="dashboard-card">
+              <div class="dashboard-card-heading">
+                <h2>Pedidos por estado</h2>
+                <span class="chart-total"
+                  >{{ dashboardOrders() === null ? '—' : dashboardOrders()!.length }} pedidos</span
+                >
+              </div>
+              @if (dashboardOrders() === null) {
+                <p class="dashboard-empty">
+                  {{ dashboardLoading() ? 'Cargando…' : 'Datos no disponibles' }}
+                </p>
+              } @else {
+                <div class="chart-scale" aria-hidden="true">
+                  <span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span>
+                </div>
+                <div class="status-chart">
+                  @for (status of orderChartStatuses; track status.code; let i = $index) {
+                    <div
+                      class="chart-row"
+                      [style.--row-delay]="i * 22 + 'ms'"
+                      [style.--bar-color]="chartColors[i]"
+                    >
+                      <span>{{ status.label }}</span
+                      ><strong
+                        >{{ orderCount(status.code) }}
+                        <small>{{ orderPercent(status.code).toFixed(0) }}%</small></strong
+                      >
+                      <div
+                        class="status-track"
+                        role="img"
+                        [attr.aria-label]="
+                          status.label +
+                          ': ' +
+                          orderCount(status.code) +
+                          ' pedidos, ' +
+                          orderPercent(status.code).toFixed(0) +
+                          '%'
+                        "
+                        [attr.title]="status.label + ': ' + orderCount(status.code) + ' pedidos'"
+                      >
+                        <i [style.width.%]="orderPercent(status.code)"></i>
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
+            </section>
+            <section class="dashboard-card">
+              <div class="dashboard-card-heading">
+                <h2>Lotes por estado</h2>
+                <span class="chart-total"
+                  >{{ dashboardLots() === null ? '—' : dashboardLots()!.length }} lotes</span
+                >
+              </div>
+              @if (dashboardLots() === null) {
+                <p class="dashboard-empty">
+                  {{ dashboardLoading() ? 'Cargando…' : 'Datos no disponibles' }}
+                </p>
+              } @else {
+                <div class="chart-scale" aria-hidden="true">
+                  <span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span>
+                </div>
+                <div class="status-chart lot-chart">
+                  @for (status of lotChartStatuses; track status.code; let i = $index) {
+                    <div
+                      class="chart-row"
+                      [style.--row-delay]="i * 22 + 'ms'"
+                      [style.--bar-color]="lotColors[i]"
+                    >
+                      <span>{{ status.label }}</span
+                      ><strong
+                        >{{ lotCount(status.code) }}
+                        <small>{{ lotPercent(status.code).toFixed(0) }}%</small></strong
+                      >
+                      <div
+                        class="status-track"
+                        role="img"
+                        [attr.aria-label]="
+                          status.label +
+                          ': ' +
+                          lotCount(status.code) +
+                          ' lotes, ' +
+                          lotPercent(status.code).toFixed(0) +
+                          '%'
+                        "
+                        [attr.title]="status.label + ': ' + lotCount(status.code) + ' lotes'"
+                      >
+                        <i [style.width.%]="lotPercent(status.code)"></i>
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
+            </section>
+          </div>
+        } @else {
+          <section class="role-dashboard">
+            <div class="role-welcome">
+              <div>
+                <span class="eyebrow">{{ roleLabel() }} · VITNA</span>
+                <h1>{{ roleHome().title }}</h1>
+                <p>Hola, {{ user().name }}. {{ roleHome().detail }}</p>
+                <button class="primary" (click)="navigate(roleHome().page)">
+                  {{ roleHome().action }} <app-icon name="arrow" />
+                </button>
+              </div>
+              <span class="role-welcome-icon"><app-icon [name]="roleHome().icon" /></span>
+            </div>
+            <div class="role-section-heading">
+              <h2>Tu resumen de hoy</h2>
+              <button (click)="loadDashboard()" [disabled]="dashboardLoading()">
+                <app-icon name="refresh" />
+                {{ dashboardLoading() ? 'Actualizando…' : 'Actualizar' }}
+              </button>
+            </div>
+            @if (dashboardError()) {
+              <p class="dashboard-warning" role="alert">
+                Algunos datos no se pudieron cargar. Vuelve a actualizar el resumen.
+              </p>
+            }
+            <div class="role-metrics">
+              @for (metric of roleMetrics(); track metric.label) {
+                <article>
+                  <span><app-icon [name]="metric.icon" /></span><small>{{ metric.label }}</small
+                  ><strong>{{ dashboardLoading() ? '…' : metric.value }}</strong>
+                </article>
+              }
+            </div>
+            <div class="role-dashboard-grid">
+              <section class="role-tasks">
+                <div class="role-section-heading">
+                  <div>
+                    <span class="eyebrow">PRÓXIMOS PASOS</span>
+                    <h2>
+                      {{
+                        can('CLIENTE')
+                          ? 'Tus pedidos en curso'
+                          : can('TRABAJADOR')
+                            ? 'Tus tareas pendientes'
+                            : 'Pendientes de tu equipo'
+                      }}
+                    </h2>
+                  </div>
+                  <span class="state-badge">{{
+                    dashboardLoading() ? '…' : roleTasks().length
+                  }}</span>
+                </div>
+                @if (dashboardLoading()) {
+                  <p class="operations-empty" role="status">Consultando tus pendientes…</p>
+                } @else if (dashboardError()) {
+                  <p class="operations-empty">
+                    Actualiza el resumen para consultar todos los pendientes.
+                  </p>
+                } @else if (roleTasks().length) {
+                  @for (task of roleTasks().slice(0, 6); track task.id) {
+                    <button class="role-task" (click)="openTask(task)">
+                      <span class="task-icon"><app-icon [name]="task.icon" /></span
+                      ><span
+                        ><strong>{{ task.title }}</strong
+                        ><small>{{ task.detail }}</small></span
+                      ><span class="state-badge">{{ statusLabel(task.status) }}</span
+                      ><app-icon name="chevron" />
+                    </button>
+                  }
+                } @else {
+                  <div class="operations-empty">
+                    <app-icon name="check" />
+                    <h3>{{ can('CLIENTE') ? 'Aún no tienes pedidos en curso' : 'Todo al día' }}</h3>
+                    <p>
+                      {{
+                        can('CLIENTE')
+                          ? 'Explora el catálogo y prepara tu primera compra.'
+                          : 'Tus próximos pendientes aparecerán aquí.'
+                      }}
+                    </p>
+                  </div>
+                }
+              </section>
+              <aside class="role-guide">
+                <span class="eyebrow">TU ESPACIO</span>
+                <h2>{{ roleLabel() }}</h2>
+                <p>{{ roleDescription(user().role) }}</p>
+                <button (click)="navigate(roleHome().page)">
+                  {{ roleHome().action }} <app-icon name="arrow" />
+                </button>
+                @if (can('ALMACENERO', 'JEFE_PRODUCCION', 'CALIDAD')) {
+                  <button (click)="navigate('inventario')">
+                    Consultar inventario <app-icon name="warehouse" />
+                  </button>
+                }
+                @if (can('CLIENTE')) {
+                  <button (click)="navigate('pedidos')">
+                    Historial de pedidos <app-icon name="orders" />
+                  </button>
+                }
+                @if (can('CALIDAD')) {
+                  <button (click)="navigate('produccion')">
+                    Seguimiento de fabricación <app-icon name="factory" />
+                  </button>
+                }
+                <div class="role-guide-note">
+                  <app-icon name="shield" />
+                  <p>
+                    {{
+                      can('TRABAJADOR')
+                        ? 'Solo puedes avanzar las órdenes que el jefe asignó a tu cuenta.'
+                        : can('CALIDAD')
+                          ? 'Los lotes con reservas deben liberarse de esas reservas antes de bloquearlos.'
+                          : can('ALMACENERO')
+                            ? 'Solo los lotes aprobados y vigentes se pueden despachar.'
+                            : can('CLIENTE')
+                              ? 'El stock se reserva cuando el administrador confirma tu pedido.'
+                              : 'Asigna un trabajador activo antes de iniciar la fabricación.'
+                    }}
+                  </p>
+                </div>
+              </aside>
+            </div>
+          </section>
+        }
+      }
+
+      @if (page() === 'usuarios') {
+        <section class="users-page">
+          <div class="users-heading">
+            <div>
+              <span class="eyebrow">ADMINISTRACIÓN DE ACCESOS</span>
+              <h1>Usuarios y clientes</h1>
+            </div>
+            <button class="primary" (click)="openUserCreate()" [disabled]="showUserCreate">
+              <app-icon name="plus" /> Crear usuario
+            </button>
+          </div>
+          <div class="users-stats">
+            <article>
+              <span><app-icon name="users" /></span>
+              <div>
+                <small>Total de cuentas</small><strong>{{ usersCount() }}</strong>
+              </div>
+            </article>
+            <article>
+              <span><app-icon name="chat" /></span>
+              <div>
+                <small>Clientes</small><strong>{{ usersCount('CLIENTE') }}</strong>
+              </div>
+            </article>
+            <article>
+              <span><app-icon name="shield" /></span>
+              <div>
+                <small>Equipo interno</small
+                ><strong>{{ usersCount() - usersCount('CLIENTE') }}</strong>
+              </div>
+            </article>
+            <article>
+              <span><app-icon name="shield" /></span>
+              <div>
+                <small>Cuentas activas</small><strong>{{ activeUsersCount() }}</strong>
+              </div>
+            </article>
+          </div>
+          @if (showUserCreate) {
+            <section class="user-create-card" aria-labelledby="create-user-title">
+              <div class="user-create-heading">
+                <div>
+                  <span class="form-heading-icon"><app-icon name="users" /></span>
+                  <div>
+                    <h2 id="create-user-title">{{ form.id ? 'Editar cuenta' : 'Nueva cuenta' }}</h2>
+                    <p>Completa los datos y asigna su acceso al sistema.</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  (click)="cancelUserCreate()"
+                  aria-label="Cerrar formulario de usuario"
+                >
+                  Cerrar
+                </button>
+              </div>
+              <form #newUserForm="ngForm" (ngSubmit)="saveUser()">
+                <ng-container [ngTemplateOutlet]="formErrorsTemplate" />
+                <div class="user-form-layout">
+                  <div class="user-personal-fields">
+                    <h3><app-icon name="users" /> Datos de la cuenta</h3>
+                    <div class="user-fields">
+                      <label for="new-user-name"
+                        >Nombre completo o razón social <span>*</span
+                        ><input
+                          id="new-user-name"
+                          name="name"
+                          [(ngModel)]="form.name"
+                          #userName="ngModel"
+                          autocomplete="name"
+                          placeholder="Ej. María Quispe o Comercial Andina"
+                          required
+                          maxlength="150"
+                        />
+                        @if (userName.touched && userName.invalid) {
+                          <small class="field-error">Ingresa el nombre de la cuenta.</small>
+                        }</label
+                      ><label for="new-user-email"
+                        >Correo electrónico <span>*</span
+                        ><input
+                          id="new-user-email"
+                          name="email"
+                          type="email"
+                          [(ngModel)]="form.email"
+                          #userEmail="ngModel"
+                          [readonly]="form.id === user().id"
+                          autocomplete="email"
+                          placeholder="correo@ejemplo.com"
+                          required
+                          email
+                          maxlength="254"
+                        />
+                        @if (userEmail.touched && userEmail.invalid) {
+                          <small class="field-error">Ingresa un correo válido.</small>
+                        }</label
+                      ><label for="new-user-phone"
+                        >Teléfono <small>Opcional</small
+                        ><input
+                          id="new-user-phone"
+                          name="phone"
+                          type="tel"
+                          [(ngModel)]="form.phone"
+                          autocomplete="tel"
+                          placeholder="Ej. 999 123 456"
+                          maxlength="30" /></label
+                      ><label for="new-user-document"
+                        >Documento <small>Opcional</small
+                        ><input
+                          id="new-user-document"
+                          name="document"
+                          [(ngModel)]="form.document"
+                          placeholder="DNI, RUC u otro documento"
+                          maxlength="30" /></label
+                      ><label for="new-user-address" class="full-field"
+                        >Dirección <small>Opcional</small
+                        ><input
+                          id="new-user-address"
+                          name="address"
+                          [(ngModel)]="form.address"
+                          autocomplete="street-address"
+                          placeholder="Calle, número y ciudad"
+                          maxlength="300"
+                      /></label>
+                    </div>
+                  </div>
+                  <div class="user-access-fields">
+                    <h3><app-icon name="shield" /> Acceso al sistema</h3>
+                    <label for="new-user-role"
+                      >Rol <span>*</span
+                      ><select
+                        id="new-user-role"
+                        name="role"
+                        [(ngModel)]="form.role"
+                        [disabled]="form.id === user().id"
+                        required
+                      >
+                        @for (r of roles; track r) {
+                          <option [value]="r">{{ roleName(r) }}</option>
+                        }
+                      </select></label
+                    >
+                    <div class="role-explanation">
+                      <app-icon name="shield" />
+                      <p>{{ roleDescription(form.role) }}</p>
+                    </div>
+                    @if (!form.id) {
+                      <label for="new-user-password"
+                        >Contraseña inicial <span>*</span>
+                        <div class="user-password-field">
+                          <input
+                            id="new-user-password"
+                            name="password"
+                            [type]="showUserPassword ? 'text' : 'password'"
+                            [(ngModel)]="form.password"
+                            #userPassword="ngModel"
+                            autocomplete="new-password"
+                            placeholder="Mínimo 10 caracteres"
+                            minlength="10"
+                            required
+                          /><button
+                            type="button"
+                            (click)="showUserPassword = !showUserPassword"
+                            [attr.aria-label]="
+                              showUserPassword
+                                ? 'Ocultar contraseña inicial'
+                                : 'Mostrar contraseña inicial'
+                            "
+                          >
+                            {{ showUserPassword ? 'Ocultar' : 'Mostrar' }}
+                          </button>
+                        </div>
+                        @if (userPassword.touched && userPassword.invalid) {
+                          <small class="field-error"
+                            >Usa una contraseña de al menos 10 caracteres.</small
+                          >
+                        }
+                      </label>
+                    }
+                  </div>
+                </div>
+                <div class="user-form-actions">
+                  <span>* Campos obligatorios</span>
+                  <div>
+                    <button type="button" (click)="cancelUserCreate()" [disabled]="busy()">
+                      Cancelar</button
+                    ><button class="primary" [disabled]="busy() || newUserForm.invalid">
+                      <app-icon name="save" />
+                      {{ busy() ? 'Guardando…' : form.id ? 'Guardar cambios' : 'Crear cuenta' }}
+                    </button>
+                  </div>
+                </div>
+              </form>
+            </section>
+          }
+          <section class="users-directory">
+            @if (recordsLoading()) {
+              <p class="operations-empty" role="status">Cargando cuentas…</p>
+            } @else if (recordsError()) {
+              <div class="operations-empty" role="alert">
+                <p>{{ recordsError() }}</p>
+                <button (click)="navigate('usuarios')">Reintentar</button>
+              </div>
+            }
+            <div class="users-toolbar">
+              <div class="user-search">
+                <app-icon name="search" /><input
+                  aria-label="Buscar usuarios por nombre o correo"
+                  [(ngModel)]="userSearch"
+                  placeholder="Buscar por nombre o correo…"
+                />
+              </div>
+              <label
+                >Rol<select [(ngModel)]="userRoleFilter">
+                  <option value="Todos">Todos los roles</option>
+                  @for (r of roles; track r) {
+                    <option [value]="r">{{ roleName(r) }}</option>
+                  }
+                </select></label
+              ><label
+                >Estado<select [(ngModel)]="userStatusFilter">
+                  <option>Todos</option>
+                  <option>Activos</option>
+                  <option>Inactivos</option>
+                </select></label
+              ><button class="clear-user-filters" (click)="resetUserFilters()">Limpiar</button>
+            </div>
+            <div class="users-list-heading">
+              <h2>Cuentas registradas</h2>
+              <span>{{ filteredUsers().length }} resultados</span>
+            </div>
+            <table class="users-table">
+              <thead>
+                <tr>
+                  <th scope="col">Usuario</th>
+                  <th scope="col">Correo electrónico</th>
+                  <th scope="col">Rol</th>
+                  <th scope="col">Estado</th>
+                  <th scope="col" class="actions-heading">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (u of filteredUsers(); track u.id) {
+                  <tr>
+                    <td>
+                      <div class="user-identity">
+                        <span
+                          class="user-table-avatar"
+                          [class.customer-avatar]="u.role === 'CLIENTE'"
+                          >{{ u.name.charAt(0).toUpperCase() }}</span
+                        >
+                        <div>
+                          <strong>{{ u.name }}</strong
+                          ><small
+                            >#{{ u.id }}
+                            @if (u.id === user().id) {
+                              · Tu cuenta
+                            }
+                          </small>
+                        </div>
+                      </div>
+                    </td>
+                    <td data-label="Correo">{{ u.email }}</td>
+                    <td data-label="Rol">
+                      <span class="user-role-badge" [class.client-role]="u.role === 'CLIENTE'"
+                        ><app-icon [name]="u.role === 'CLIENTE' ? 'users' : 'shield'" />{{
+                          roleName(u.role)
+                        }}</span
+                      >
+                    </td>
+                    <td data-label="Estado">
+                      <span class="user-state" [class.inactive]="!u.active"
+                        ><i aria-hidden="true"></i>{{ u.active ? 'Activo' : 'Inactivo' }}</span
+                      >
+                    </td>
+                    <td data-label="Acciones">
+                      <div class="user-row-actions">
+                        <button
+                          (click)="editUser(u)"
+                          [disabled]="busy()"
+                          [attr.aria-label]="'Editar cuenta de ' + u.name"
+                          title="Editar cuenta"
+                        >
+                          <app-icon name="edit" /></button
+                        ><button
+                          [class.reactivate]="!u.active"
+                          (click)="toggleUser(u)"
+                          [disabled]="busy() || u.id === user().id"
+                          [attr.aria-label]="
+                            (u.active ? 'Desactivar cuenta de ' : 'Reactivar cuenta de ') + u.name
+                          "
+                          [attr.title]="
+                            u.id === user().id
+                              ? 'No puedes desactivar tu propia cuenta'
+                              : u.active
+                                ? 'Desactivar cuenta'
+                                : 'Reactivar cuenta'
+                          "
+                        >
+                          <app-icon name="power" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+            @if (!recordsLoading() && !recordsError() && filteredUsers().length === 0) {
+              <div class="users-empty">
+                <app-icon name="search" />
+                <h3>No hay cuentas que coincidan</h3>
+                <button (click)="resetUserFilters()">Limpiar filtros</button>
+              </div>
+            }
+          </section>
+        </section>
+      }
+      @if (page() === 'productos') {
+        <section class="operations-page">
+          <div class="operations-heading">
+            <div>
+              <span class="eyebrow">ADMINISTRACIÓN DEL CATÁLOGO</span>
+              <h1>Productos</h1>
+              <p>Gestiona presentaciones, precios y códigos de barras.</p>
+            </div>
+            <button class="primary" (click)="openProduct()">
+              <app-icon name="plus" /> Agregar producto
+            </button>
+          </div>
+          <div class="operations-metrics">
+            <article>
+              <small>Productos registrados</small><strong>{{ products().length }}</strong>
+            </article>
+            <article>
+              <small>Publicados</small><strong>{{ publishedCount() }}</strong>
+            </article>
+            <article>
+              <small>Sin publicar</small><strong>{{ products().length - publishedCount() }}</strong>
+            </article>
+          </div>
+          <section class="operations-directory">
+            <div class="operations-toolbar">
+              <input
+                aria-label="Buscar productos por nombre, SKU o código de barras"
+                [(ngModel)]="productSearch"
+                placeholder="Buscar o escanear código de barras…"
+              /><select aria-label="Filtrar publicación" [(ngModel)]="productStatus">
+                <option>Todos</option>
+                <option>Publicados</option>
+                <option>Ocultos</option></select
+              ><span
+                >{{ filteredAdminProducts().length }}
+                {{ filteredAdminProducts().length === 1 ? 'producto' : 'productos' }}</span
+              >
+            </div>
+            <div class="table-scroll">
+              <table class="operations-table">
+                <thead>
+                  <tr>
+                    <th>Producto</th>
+                    <th>Identificación</th>
+                    <th>Precio</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (p of filteredAdminProducts(); track p.id) {
+                    <tr>
+                      <td>
+                        <strong>{{ p.name }}</strong
+                        ><small>{{ p.category }} · {{ p.presentation }}</small>
+                      </td>
+                      <td>
+                        <strong>{{ p.sku }}</strong
+                        ><code>{{ p.barcode }}</code>
+                      </td>
+                      <td>{{ p.price | currency: 'PEN' : 'S/ ' }}</td>
+                      <td>
+                        <span class="state-badge" [class.positive]="p.published">{{
+                          p.published ? 'Publicado' : 'Oculto'
+                        }}</span>
+                      </td>
+                      <td>
+                        <div class="table-actions">
+                          <button (click)="edit(p)" [disabled]="busy()">
+                            <app-icon name="edit" /> Editar</button
+                          ><button (click)="downloadBarcode(p)" [disabled]="!p.barcode">
+                            Descargar etiqueta
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+            @if (filteredAdminProducts().length === 0) {
+              <div class="operations-empty">
+                <app-icon name="box" />
+                <h3>No hay productos que coincidan</h3>
+                <p>Agrega un producto o ajusta la búsqueda.</p>
+              </div>
+            }
+          </section>
+        </section>
+      }
+      @if (page() === 'inventario' && can('ADMIN', 'ALMACENERO') && showOperationForm) {
+        <section class="card operation-form">
+          <h2>Recibir lote</h2>
+          <div class="receiving-scan">
+            <label for="receiving-scan"
+              >Seleccionar producto por código de barras o SKU<input
+                id="receiving-scan"
+                [(ngModel)]="receivingCode"
+                [disabled]="!!form.productionId"
+                (keydown.enter)="$event.preventDefault(); selectScannedProduct()"
+                placeholder="Escanea o ingresa el código…" /></label
+            ><button
+              (click)="selectScannedProduct()"
+              [disabled]="!!form.productionId || !receivingCode.trim()"
+            >
+              Buscar producto
+            </button>
+          </div>
+          <p>La recepción ingresa en cuarentena hasta su liberación por calidad.</p>
+          <form #operationForm="ngForm" (ngSubmit)="save()">
+            <ng-container [ngTemplateOutlet]="formErrorsTemplate" />
+            @if (page() === 'inventario') {
+              <label class="full-form-field"
+                >Origen del lote<select
+                  name="productionId"
+                  [(ngModel)]="form.productionId"
+                  (ngModelChange)="selectProductionReceipt()"
+                >
+                  <option value="">Recepción externa / sin orden de producción</option>
+                  @for (p of productionReceipts(); track p.id) {
+                    <option [value]="p.id">
+                      Orden #{{ p.id }} · {{ p.product.name }} · {{ p.quantity }} unidades obtenidas
+                    </option>
+                  }</select
+                ><small
+                  >Las órdenes terminadas solo pueden recibirse una vez y entran en
+                  cuarentena.</small
+                ></label
+              >
+              @if (receiptError()) {
+                <p class="inline-error full-form-field">{{ receiptError() }}</p>
+              }
+            }
+            <label
+              >Producto<select
+                name="productId"
+                [(ngModel)]="form.productId"
+                [disabled]="!!form.productionId"
+                required
+              >
+                <option value="">Selecciona un producto</option>
+                @for (p of products(); track p.id) {
+                  <option [value]="p.id">{{ p.sku }} · {{ p.name }}</option>
+                }
+              </select></label
+            ><label
+              >Código de lote<input
+                name="code"
+                [(ngModel)]="form.code"
+                placeholder="Ej. LOT-2026-001"
+                maxlength="100"
+                required /></label
+            ><label
+              >Almacén<input
+                name="warehouse"
+                [(ngModel)]="form.warehouse"
+                maxlength="150"
+                required /></label
+            ><label
+              >Fecha de vencimiento<input
+                name="expiry"
+                type="date"
+                [min]="today"
+                [(ngModel)]="form.expiry"
+                required /></label
+            ><label
+              >Cantidad recibida<input
+                name="quantity"
+                [readonly]="!!form.productionId"
+                type="number"
+                min="0.01"
+                step="0.01"
+                [(ngModel)]="form.quantity"
+                placeholder="0.00"
+                required
+            /></label>
+            <div class="operation-form-submit">
+              <button
+                class="primary"
+                [disabled]="busy() || operationForm.invalid || form.expiry < today"
+              >
+                {{ busy() ? 'Guardando…' : 'Registrar recepción' }}
+              </button>
+            </div>
+          </form>
+        </section>
+      }
+      @if (page() === 'produccion' && can('JEFE_PRODUCCION') && showOperationForm) {
+        <section class="card operation-form">
+          <h2>Planificar fabricación</h2>
+          <p>
+            Registra el producto, la cantidad y las etapas separadas por →. Puedes asignar el
+            trabajador ahora o después.
+          </p>
+          @if (workersError()) {
+            <p class="field-error">{{ workersError() }}</p>
+          }
+          <form #operationForm="ngForm" (ngSubmit)="save()">
+            <ng-container [ngTemplateOutlet]="formErrorsTemplate" />
+            <label
+              >Producto<select
+                name="productId"
+                [(ngModel)]="form.productId"
+                [disabled]="!!form.productionId"
+                required
+              >
+                <option value="">Selecciona un producto</option>
+                @for (p of products(); track p.id) {
+                  <option [value]="p.id">{{ p.sku }} · {{ p.name }}</option>
+                }
+              </select></label
+            ><label
+              >Cantidad planificada<input
+                name="planned"
+                type="number"
+                min="0.01"
+                step="0.01"
+                [(ngModel)]="form.planned"
+                placeholder="0.00"
+                required /></label
+            ><label
+              >Trabajador responsable <small>Opcional</small
+              ><select name="workerId" [(ngModel)]="form.workerId">
+                <option value="">Asignar después</option>
+                @for (worker of workers(); track worker.id) {
+                  <option [value]="worker.id">{{ worker.name }}</option>
+                }
+              </select></label
+            ><label
+              >Ruta de producción<input
+                name="route"
+                [(ngModel)]="form.route"
+                maxlength="255"
+                placeholder="Selección → tostado → empaque"
+                required
+            /></label>
+            <div class="route-preview full-form-field">
+              <small>Etapas en el orden de ejecución. Separa los nombres con →, > o coma.</small>
+              <div>
+                @for (step of routePreview(); track $index) {
+                  <span>{{ $index + 1 }} · {{ step }}</span>
+                }
+              </div>
+            </div>
+            <div class="operation-form-submit">
+              <button class="primary" [disabled]="busy() || operationForm.invalid">
+                {{ busy() ? 'Guardando…' : 'Crear orden' }}
+              </button>
+            </div>
+          </form>
+        </section>
+      }
+      @if (['pedidos', 'inventario', 'produccion', 'calidad'].includes(page())) {
+        <section class="operations-directory">
+          @if (focusedId !== null) {
+            <div class="focused-record">
+              Mostrando el registro #{{ focusedId
+              }}<button (click)="focusedId = null; recordPage = 1">Ver todos</button>
+            </div>
+          }
+          <div class="operations-toolbar">
+            <input
+              [(ngModel)]="recordSearch"
+              (ngModelChange)="recordPage = 1"
+              aria-label="Buscar registros"
+              placeholder="Buscar por producto, código, cliente o número…"
+            /><select
+              [(ngModel)]="recordStatus"
+              (ngModelChange)="recordPage = 1"
+              aria-label="Filtrar estado"
+            >
+              <option>Todos</option>
+              @for (status of recordStatuses(); track status) {
+                <option [value]="status">{{ statusLabel(status) }}</option>
+              }</select
+            ><button (click)="navigate(page())" [disabled]="busy() || recordsLoading()">
+              <app-icon name="refresh" /> Actualizar
+            </button>
+          </div>
+          @if (recordsLoading()) {
+            <div class="operations-empty" role="status">Cargando registros…</div>
+          } @else if (recordsError()) {
+            <div class="operations-empty" role="alert">
+              <h3>No se pudieron cargar los registros</h3>
+              <p>{{ recordsError() }}</p>
+              <button (click)="navigate(page())">Reintentar</button>
+            </div>
+          } @else {
+            @for (r of filteredRecords(); track r.id) {
+              <article class="operation-record">
+                <div class="record-heading">
+                  <div>
+                    <small
+                      >{{
+                        page() === 'pedidos'
+                          ? 'PEDIDO'
+                          : page() === 'produccion'
+                            ? 'ORDEN DE PRODUCCIÓN'
+                            : 'LOTE'
+                      }}
+                      #{{ r.id }}</small
+                    >
+                    <h3>
+                      {{
+                        can('CLIENTE') && page() === 'pedidos'
+                          ? 'Tu pedido'
+                          : r.product?.name || r.customer?.name
+                      }}
+                    </h3>
+                    <p>{{ r.code || r.route || r.address }}</p>
+                  </div>
+                  <span
+                    class="state-badge"
+                    [class.positive]="
+                      ['APROBADO', 'ENTREGADO', 'CONFIRMADO', 'TERMINADA'].includes(r.status)
+                    "
+                    [class.negative]="['RECHAZADO', 'CANCELADO', 'CANCELADA'].includes(r.status)"
+                    >{{ statusLabel(r.status) }}</span
+                  >
+                </div>
+                <div class="record-facts">
+                  @if (page() === 'pedidos') {
+                    <span
+                      >Total <strong>{{ r.total | currency: 'PEN' : 'S/ ' }}</strong></span
+                    >
+                  } @else if (page() === 'produccion') {
+                    <span
+                      >Cantidad planificada <strong>{{ r.planned }}</strong></span
+                    ><span
+                      >Responsable <strong>{{ r.assignedTo?.name || 'Sin asignar' }}</strong></span
+                    ><span
+                      >Cantidad obtenida <strong>{{ r.produced }}</strong></span
+                    ><span
+                      >Avance <strong>{{ productionProgress(r) }}%</strong></span
+                    >
+                  } @else {
+                    <span
+                      >Cantidad <strong>{{ r.quantity }}</strong></span
+                    ><span
+                      >Reservado <strong>{{ r.reserved }}</strong></span
+                    ><span
+                      >Disponible
+                      <strong>{{
+                        r.status === 'APROBADO' && !expired(r) ? r.quantity - r.reserved : 0
+                      }}</strong></span
+                    ><span
+                      >Vencimiento
+                      <strong [class.field-error]="expired(r)"
+                        >{{ r.expiry }}{{ expired(r) ? ' · Vencido' : '' }}</strong
+                      ></span
+                    ><span
+                      >Almacén <strong>{{ r.warehouse }}</strong></span
+                    >
+                    @if (r.productionId) {
+                      <span
+                        >Fabricación de origen <strong>Orden #{{ r.productionId }}</strong></span
+                      >
+                    }
+                  }
+                </div>
+                @if (page() === 'produccion') {
+                  <div
+                    class="production-progress"
+                    [attr.aria-label]="'Avance ' + productionProgress(r) + '%'"
+                  >
+                    <i [style.width.%]="productionProgress(r)"></i>
+                  </div>
+                  <div class="production-route">
+                    @for (step of r.steps; track step.id) {
+                      <div
+                        class="production-step"
+                        [class.step-complete]="step.status === 'COMPLETADA'"
+                        [class.step-active]="step.status === 'EN_CURSO'"
+                      >
+                        <span class="step-number">{{
+                          step.status === 'COMPLETADA' ? '✓' : step.position
+                        }}</span>
+                        <div>
+                          <strong>{{ step.name }}</strong
+                          ><small
+                            >{{ statusLabel(step.status) }}
+                            @if (step.completedAt) {
+                              · {{ step.completedAt | date: 'dd/MM HH:mm' }}
+                            }
+                          </small>
+                        </div>
+                        @if (
+                          can('TRABAJADOR') &&
+                          currentStep(r)?.id === step.id &&
+                          ['PLANIFICADA', 'EN_CURSO'].includes(r.status)
+                        ) {
+                          @if (step.status === 'PENDIENTE') {
+                            <button
+                              class="primary"
+                              [disabled]="busy()"
+                              (click)="advanceStep(r, step, 'START')"
+                            >
+                              Iniciar etapa
+                            </button>
+                          } @else {
+                            <div class="complete-step">
+                              @if (step.position === r.steps.length) {
+                                <label [for]="'produced-' + r.id"
+                                  >Cantidad obtenida<input
+                                    [id]="'produced-' + r.id"
+                                    type="number"
+                                    min="0.01"
+                                    step="0.01"
+                                    [max]="r.planned"
+                                    [(ngModel)]="producedDraft[r.id]"
+                                /></label>
+                              }
+                              <button
+                                class="primary"
+                                [disabled]="
+                                  busy() ||
+                                  (step.position === r.steps.length &&
+                                    (!producedDraft[r.id] ||
+                                      producedDraft[r.id] <= 0 ||
+                                      producedDraft[r.id] > r.planned))
+                                "
+                                (click)="advanceStep(r, step, 'COMPLETE')"
+                              >
+                                Completar etapa
+                              </button>
+                            </div>
+                          }
+                        }
+                      </div>
+                    }
+                  </div>
+                  @if (can('JEFE_PRODUCCION') && r.status === 'PLANIFICADA') {
+                    <div class="production-assignment">
+                      <label [for]="'worker-' + r.id"
+                        >Trabajador responsable<select
+                          [id]="'worker-' + r.id"
+                          [(ngModel)]="assignments[r.id]"
+                        >
+                          <option value="">Selecciona un trabajador</option>
+                          @for (worker of workers(); track worker.id) {
+                            <option [value]="worker.id">{{ worker.name }}</option>
+                          }
+                        </select></label
+                      ><button
+                        class="primary"
+                        [disabled]="busy() || !assignments[r.id]"
+                        (click)="assignProduction(r)"
+                      >
+                        Asignar</button
+                      ><button [disabled]="busy()" (click)="reviewCancellation(r, true)">
+                        Cancelar orden
+                      </button>
+                    </div>
+                  }
+                }
+                @if (['inventario', 'calidad'].includes(page()) && r.reviewedAt) {
+                  <div class="quality-review">
+                    <app-icon name="shield" />
+                    <div>
+                      <strong>Última revisión · {{ r.reviewedBy }}</strong
+                      ><small>{{ r.reviewedAt | date: 'dd/MM/yyyy HH:mm' }}</small>
+                      @if (r.qualityNote) {
+                        <p>{{ r.qualityNote }}</p>
+                      }
+                    </div>
+                  </div>
+                }
+                @if (page() === 'calidad') {
+                  <label class="quality-note" [for]="'quality-note-' + r.id"
+                    >Observaciones de revisión
+                    <small>Obligatorias para rechazar o poner en cuarentena</small
+                    ><textarea
+                      [id]="'quality-note-' + r.id"
+                      [(ngModel)]="qualityNotes[r.id]"
+                      maxlength="1000"
+                      rows="2"
+                      placeholder="Registra el motivo de tu decisión…"
+                    ></textarea>
+                  </label>
+                }
+                @if (page() === 'pedidos' && can('ALMACENERO') && r.picking?.length) {
+                  <div class="picking-list">
+                    <h4>Lotes reservados para preparar</h4>
+                    <p>Retira estas cantidades de los lotes indicados.</p>
+                    @for (lot of r.picking; track $index) {
+                      <div>
+                        <strong>{{ lot.product }}</strong
+                        ><span>Lote {{ lot.lotCode }} · {{ lot.warehouse }}</span
+                        ><span>Vence {{ lot.expiry }}</span
+                        ><b>{{ lot.quantity }} unidades</b>
+                        @if (lot.status !== 'APROBADO' || expired(lot)) {
+                          <small class="field-error">Lote bloqueado o vencido. No despachar.</small>
+                        }
+                      </div>
+                    }
+                  </div>
+                }
+                @if (page() === 'produccion' && r.status === 'TERMINADA') {
+                  <p class="order-help">
+                    @if (r.outputLot) {
+                      Lote {{ r.outputLot.code }} · {{ statusLabel(r.outputLot.status) }} ·
+                      {{ r.outputLot.warehouse }}
+                    } @else {
+                      Fabricación terminada. El lote obtenido se recibe en almacén y se libera tras
+                      su revisión de calidad.
+                    }
+                  </p>
+                }
+                @if (page() === 'pedidos' && can('CLIENTE')) {
+                  <div class="order-tracking">
+                    @for (status of orderSteps; track status) {
+                      <span [class.tracking-done]="orderStepDone(r, status)"
+                        ><i></i>{{ statusLabel(status) }}</span
+                      >
+                    }
+                  </div>
+                  <p class="order-help">{{ orderHelp(r.status) }}</p>
+                }
+                @if (page() === 'pedidos' && r.items?.length) {
+                  <div class="order-lines">
+                    @for (item of r.items; track item.productId) {
+                      <div>
+                        <strong>{{ item.name }}</strong
+                        ><span
+                          >{{ item.quantity }} ×
+                          {{ item.unitPrice | currency: 'PEN' : 'S/ ' }}</span
+                        ><b>{{ item.subtotal | currency: 'PEN' : 'S/ ' }}</b>
+                      </div>
+                    }
+                  </div>
+                }
+                <div class="record-actions">
+                  @if (
+                    page() === 'pedidos' && can('CLIENTE') && r.status === 'PENDIENTE_REVISION'
+                  ) {
+                    <button [disabled]="busy()" (click)="reviewCancellation(r)">
+                      Cancelar mi pedido
+                    </button>
+                  }
+                  @if (page() === 'pedidos' && can('ADMIN')) {
+                    @if (r.status === 'PENDIENTE_REVISION') {
+                      <button
+                        class="primary"
+                        [disabled]="busy()"
+                        (click)="orderStatus(r.id, 'PENDIENTE_PAGO')"
+                      >
+                        Confirmar y reservar
+                      </button>
+                    }
+                    @if (r.status === 'PENDIENTE_PAGO') {
+                      <button
+                        class="primary"
+                        [disabled]="busy()"
+                        (click)="orderStatus(r.id, 'CONFIRMADO')"
+                      >
+                        Pago verificado
+                      </button>
+                    }
+                    @if (r.status === 'DESPACHADO') {
+                      <button
+                        class="primary"
+                        [disabled]="busy()"
+                        (click)="orderStatus(r.id, 'ENTREGADO')"
+                      >
+                        Confirmar entrega
+                      </button>
+                    }
+                    @if (
+                      ['PENDIENTE_REVISION', 'PENDIENTE_PAGO', 'CONFIRMADO'].includes(r.status)
+                    ) {
+                      <button [disabled]="busy()" (click)="reviewCancellation(r)">
+                        Cancelar pedido
+                      </button>
+                    }
+                  }
+                  @if (page() === 'pedidos' && can('ALMACENERO')) {
+                    @if (r.status === 'CONFIRMADO') {
+                      <button
+                        class="primary"
+                        [disabled]="busy()"
+                        (click)="orderStatus(r.id, 'EN_PREPARACION')"
+                      >
+                        Preparar
+                      </button>
+                    }
+                    @if (r.status === 'EN_PREPARACION') {
+                      <button
+                        class="primary"
+                        [disabled]="busy()"
+                        (click)="orderStatus(r.id, 'DESPACHADO')"
+                      >
+                        Despachar
+                      </button>
+                    }
+                  }
+                  @if (page() === 'calidad') {
+                    <button
+                      class="primary"
+                      [disabled]="busy() || expired(r) || r.status === 'APROBADO'"
+                      (click)="quality(r.id, 'APROBADO')"
+                    >
+                      Aprobar</button
+                    ><button
+                      [disabled]="
+                        busy() ||
+                        r.reserved > 0 ||
+                        r.status === 'RECHAZADO' ||
+                        !(qualityNotes[r.id] || '').trim()
+                      "
+                      (click)="quality(r.id, 'RECHAZADO')"
+                    >
+                      Rechazar</button
+                    ><button
+                      [disabled]="
+                        busy() ||
+                        r.reserved > 0 ||
+                        r.status === 'CUARENTENA' ||
+                        !(qualityNotes[r.id] || '').trim()
+                      "
+                      (click)="quality(r.id, 'CUARENTENA')"
+                    >
+                      Cuarentena
+                    </button>
+                    @if (r.reserved > 0) {
+                      <small>Este lote tiene reservas activas.</small>
+                    }
+                  }
+                </div>
+              </article>
+            }
+            @if (filteredRecords().length === 0) {
+              <div class="operations-empty">
+                <app-icon name="search" />
+                <h3>
+                  {{
+                    page() === 'calidad' && recordStatus === 'CUARENTENA'
+                      ? 'No hay lotes pendientes de revisión'
+                      : records().length
+                        ? 'No hay coincidencias'
+                        : 'Todavía no hay registros'
+                  }}
+                </h3>
+                @if (page() === 'calidad' && recordStatus === 'CUARENTENA') {
+                  <button (click)="recordStatus = 'Todos'; recordPage = 1">
+                    Ver todos los lotes
+                  </button>
+                }
+                <p>
+                  {{
+                    records().length
+                      ? 'Ajusta los filtros para ver más resultados.'
+                      : 'Los nuevos registros aparecerán aquí.'
+                  }}
+                </p>
+              </div>
+            }
+            @if (recordResults().length) {
+              <footer class="records-pagination">
+                <span
+                  >{{ recordResults().length }}
+                  {{ recordResults().length === 1 ? 'registro' : 'registros' }} · Página
+                  {{ recordPage }} de {{ recordPageCount() }}</span
+                >
+                <div>
+                  <button
+                    [disabled]="recordPage === 1 || busy()"
+                    (click)="recordPage = recordPage - 1"
+                  >
+                    Anterior</button
+                  ><button
+                    [disabled]="recordPage === recordPageCount() || busy()"
+                    (click)="recordPage = recordPage + 1"
+                  >
+                    Siguiente
+                  </button>
+                </div>
+              </footer>
+            }
+          }
+        </section>
+      }
+    </main>
+  </div>
+}
+@if (!workspaceActive()) {
+  <footer class="site-footer">
+    <div>
+      <img src="vitna-logo.png" alt="VITNA" width="145" height="73" />
+      <p>El sabor de nuestra tierra,<br />la energía de cada día.</p>
+    </div>
+    <div>
+      <strong>Explora</strong><button (click)="navigate('catalogo')">Nuestros productos</button
+      ><button (click)="buyingGuide()">Cómo comprar</button>
+    </div>
+    <div>
+      <strong>VITNA · Ayacucho</strong>
+      <p>Agroindustrias Santa Rosa de Lima S.R.L.</p>
+      <button (click)="navigate('login')">Acceso al sistema →</button>
+    </div>
+  </footer>
+}
+
+<ng-template #formErrorsTemplate>
+  @if (fieldErrors().length) {
+    <div class="form-errors" role="alert">
+      <strong>Revisa estos datos</strong>
+      @for (error of fieldErrors(); track error[0]) {
+        <p>{{ fieldLabel(error[0]) }}: {{ error[1] }}</p>
+      }
+    </div>
+  }
+</ng-template>
+@if (confirmation()) {
+  <div class="modal-backdrop">
+    <section
+      class="confirmation-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="confirmation-title"
+      (keydown)="dialogKey($event)"
+    >
+      <span class="confirmation-icon"><app-icon name="shield" /></span>
+      <h2 id="confirmation-title">{{ confirmation()!.title }}</h2>
+      <p>{{ confirmation()!.description }}</p>
+      <div class="modal-actions">
+        <button (click)="confirmation.set(null)">Volver</button
+        ><button class="danger-button" [disabled]="busy()" (click)="confirmAction()">
+          Confirmar cancelación
+        </button>
+      </div>
+    </section>
+  </div>
+}
